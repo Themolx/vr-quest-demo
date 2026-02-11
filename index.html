@@ -259,14 +259,16 @@
             if (!cam) return;
             const sec = dt / 1000;
 
-            // Movement from left stick
+            // Movement from left stick — use WORLD quaternion so physical head turn is respected
             if (Math.abs(this.leftStick.x) > 0.1 || Math.abs(this.leftStick.y) > 0.1) {
                 const camObj = cam.object3D;
+                const worldQuat = new THREE.Quaternion();
+                camObj.getWorldQuaternion(worldQuat);
                 const dir = new THREE.Vector3(0, 0, -1);
-                dir.applyQuaternion(camObj.quaternion);
+                dir.applyQuaternion(worldQuat);
                 dir.y = 0; dir.normalize();
                 const right = new THREE.Vector3(1, 0, 0);
-                right.applyQuaternion(camObj.quaternion);
+                right.applyQuaternion(worldQuat);
                 right.y = 0; right.normalize();
 
                 this.moveVec.set(0, 0, 0);
@@ -541,22 +543,41 @@
     AFRAME.registerComponent('portal-ring', {
         schema: { color: { default: '#f5576c' } },
         init: function() {
-            // Create ring geometry
+            // Create ring geometry - big enough to walk through
             const ring = document.createElement('a-torus');
-            ring.setAttribute('radius', 1.2);
-            ring.setAttribute('radius-tubular', 0.06);
+            ring.setAttribute('radius', 2);
+            ring.setAttribute('radius-tubular', 0.1);
             ring.setAttribute('segments-tubular', 32);
             ring.setAttribute('segments-radial', 12);
-            ring.setAttribute('material', `color: ${this.data.color}; emissive: ${this.data.color}; emissiveIntensity: 0.8; transparent: true; opacity: 0.9`);
-            ring.setAttribute('spin', 'x: 0; y: 0; z: 0.5');
+            ring.setAttribute('material', `color: ${this.data.color}; emissive: ${this.data.color}; emissiveIntensity: 1; transparent: true; opacity: 0.95`);
+            ring.setAttribute('spin', 'x: 0; y: 0; z: 0.3');
             this.el.appendChild(ring);
 
-            // Inner glow plane
+            // Second ring rotating opposite
+            const ring2 = document.createElement('a-torus');
+            ring2.setAttribute('radius', 2.2);
+            ring2.setAttribute('radius-tubular', 0.04);
+            ring2.setAttribute('segments-tubular', 32);
+            ring2.setAttribute('segments-radial', 8);
+            ring2.setAttribute('material', `color: ${this.data.color}; emissive: ${this.data.color}; emissiveIntensity: 0.6; transparent: true; opacity: 0.6`);
+            ring2.setAttribute('spin', 'x: 0.2; y: 0; z: -0.4');
+            this.el.appendChild(ring2);
+
+            // Inner glow plane - larger clickable area
             const glow = document.createElement('a-circle');
-            glow.setAttribute('radius', 1.1);
-            glow.setAttribute('material', `color: ${this.data.color}; transparent: true; opacity: 0.15; side: double`);
-            glow.setAttribute('breathe', 'speed: 1; amount: 0.1');
+            glow.setAttribute('radius', 1.8);
+            glow.setAttribute('material', `color: ${this.data.color}; transparent: true; opacity: 0.2; side: double`);
+            glow.setAttribute('breathe', 'speed: 1.5; amount: 0.15');
+            glow.setAttribute('class', 'clickable');
             this.el.appendChild(glow);
+
+            // Point light so portal glows from far away
+            const light = document.createElement('a-light');
+            light.setAttribute('type', 'point');
+            light.setAttribute('color', this.data.color);
+            light.setAttribute('intensity', '1.5');
+            light.setAttribute('distance', '20');
+            this.el.appendChild(light);
         }
     });
 
@@ -582,8 +603,8 @@
      A-FRAME SCENE
      ═══════════════════════════════════════════════ -->
 <a-scene
-    fog="type: exponential; color: #020005; density: 0.015"
-    background="color: #020005"
+    fog="type: exponential; color: #05000a; density: 0.008"
+    background="color: #05000a"
     renderer="antialias: true; colorManagement: true; physicallyCorrectLights: true"
     vr-mode-ui="enabled: true"
     corruption-fx>
@@ -625,6 +646,20 @@
         <img id="sunflower01" src="art/sunflower_01.jpg" crossorigin="anonymous">
     </a-assets>
 
+
+    <!-- Dark sky so it never goes fully black -->
+    <a-sky color="#08000f"></a-sky>
+
+    <!-- Global ambient so nothing is ever pitch black -->
+    <a-light type="ambient" intensity="0.2" color="#1a0a2e"></a-light>
+
+    <!-- Guide lights between rooms (breadcrumbs in the void) -->
+    <a-light type="point" position="0 2 15" intensity="0.6" color="#f5576c" distance="12"></a-light>
+    <a-light type="point" position="0 2 22" intensity="0.5" color="#f5576c" distance="10"></a-light>
+    <a-light type="point" position="0 2 45" intensity="0.6" color="#43e97b" distance="12"></a-light>
+    <a-light type="point" position="0 2 55" intensity="0.5" color="#43e97b" distance="10"></a-light>
+    <a-light type="point" position="0 2 80" intensity="0.6" color="#fff" distance="12"></a-light>
+    <a-light type="point" position="0 2 90" intensity="0.5" color="#fff" distance="10"></a-light>
 
     <!-- ═══════════════════════════════════════════
          ROOM 1: THE WHITE GALLERY (spawn point)
