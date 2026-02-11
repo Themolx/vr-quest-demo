@@ -199,28 +199,64 @@
             this.snapReady = true;
             this.leftStick = { x: 0, y: 0 };
             this.rightStick = { x: 0, y: 0 };
+            this.controllersBound = false;
+        },
+        bindControllers: function() {
+            if (this.controllersBound) return;
+            const left = document.getElementById('left-ctrl');
+            const right = document.getElementById('right-ctrl');
 
-            this.el.sceneEl.addEventListener('axismove', (e) => {
-                const hand = e.target.getAttribute('laser-controls')?.hand ||
-                             e.target.getAttribute('oculus-touch-controls')?.hand;
-                if (!hand) return;
-                if (hand === 'left') {
-                    this.leftStick.x = e.detail.axis[2] || 0;
-                    this.leftStick.y = e.detail.axis[3] || 0;
-                } else {
-                    this.rightStick.x = e.detail.axis[2] || 0;
-                    this.rightStick.y = e.detail.axis[3] || 0;
-                }
-            });
+            if (left) {
+                // thumbstickmoved is the reliable A-Frame event for Oculus Touch
+                left.addEventListener('thumbstickmoved', (e) => {
+                    this.leftStick.x = e.detail.x;
+                    this.leftStick.y = e.detail.y;
+                });
+                // Fallback: axismove with WebXR indices [0,1]
+                left.addEventListener('axismove', (e) => {
+                    const ax = e.detail.axis;
+                    if (ax.length >= 4 && (ax[2] !== 0 || ax[3] !== 0)) {
+                        this.leftStick.x = ax[2];
+                        this.leftStick.y = ax[3];
+                    } else if (ax.length >= 2) {
+                        this.leftStick.x = ax[0];
+                        this.leftStick.y = ax[1];
+                    }
+                });
+            }
+            if (right) {
+                right.addEventListener('thumbstickmoved', (e) => {
+                    this.rightStick.x = e.detail.x;
+                    this.rightStick.y = e.detail.y;
+                });
+                right.addEventListener('axismove', (e) => {
+                    const ax = e.detail.axis;
+                    if (ax.length >= 4 && (ax[2] !== 0 || ax[3] !== 0)) {
+                        this.rightStick.x = ax[2];
+                        this.rightStick.y = ax[3];
+                    } else if (ax.length >= 2) {
+                        this.rightStick.x = ax[0];
+                        this.rightStick.y = ax[1];
+                    }
+                });
+            }
+            if (left || right) {
+                this.controllersBound = true;
+                console.log('[quest-locomotion] Controllers bound. L:', !!left, 'R:', !!right);
+            }
         },
         tick: function(t, dt) {
             if (!dt) return;
+
+            // Keep trying to bind until controllers appear
+            if (!this.controllersBound) this.bindControllers();
+
             const cam = this.el.querySelector('[camera]');
             if (!cam) return;
             const sec = dt / 1000;
 
             // Movement from left stick
-            if (Math.abs(this.leftStick.x) > 0.15 || Math.abs(this.leftStick.y) > 0.15) {
+            if (Math.abs(this.leftStick.x) > 0.1 || Math.abs(this.leftStick.y) > 0.1) {
                 const camObj = cam.object3D;
                 const dir = new THREE.Vector3(0, 0, -1);
                 dir.applyQuaternion(camObj.quaternion);
@@ -236,7 +272,7 @@
             }
 
             // Snap turn from right stick
-            if (Math.abs(this.rightStick.x) > 0.7) {
+            if (Math.abs(this.rightStick.x) > 0.6) {
                 if (this.snapReady) {
                     const angle = this.rightStick.x > 0 ? -this.data.snapAngle : this.data.snapAngle;
                     this.el.object3D.rotation.y += THREE.MathUtils.degToRad(angle);
@@ -246,6 +282,12 @@
             } else {
                 this.snapReady = true;
             }
+
+            // Reset sticks to zero when idle (prevents drift)
+            this.leftStick.x *= 0.8;
+            this.leftStick.y *= 0.8;
+            this.rightStick.x *= 0.8;
+            this.rightStick.y *= 0.8;
         }
     });
 
@@ -1043,14 +1085,16 @@
         </a-camera>
 
         <!-- Left controller - movement -->
-        <a-entity
+        <a-entity id="left-ctrl"
             laser-controls="hand: left; model: true"
+            oculus-touch-controls="hand: left"
             raycaster="objects: .clickable; far: 20; lineColor: #f5576c; lineOpacity: 0.5">
         </a-entity>
 
         <!-- Right controller - interaction -->
-        <a-entity
+        <a-entity id="right-ctrl"
             laser-controls="hand: right; model: true"
+            oculus-touch-controls="hand: right"
             raycaster="objects: .clickable; far: 20; lineColor: #667eea; lineOpacity: 0.5">
         </a-entity>
     </a-entity>
