@@ -200,6 +200,31 @@
             this.leftStick = { x: 0, y: 0 };
             this.rightStick = { x: 0, y: 0 };
             this.controllersBound = false;
+
+            // Scene-level fallback: catch ALL axismove events that bubble up
+            this.el.sceneEl.addEventListener('axismove', (e) => {
+                const target = e.target;
+                const id = target.id;
+                const ax = e.detail.axis;
+                // Determine hand from element id or laser-controls attribute
+                let hand = null;
+                if (id === 'left-ctrl') hand = 'left';
+                else if (id === 'right-ctrl') hand = 'right';
+                else {
+                    const lc = target.getAttribute('laser-controls');
+                    if (lc) hand = (typeof lc === 'object') ? lc.hand : (lc.includes('left') ? 'left' : 'right');
+                }
+                if (!hand) return;
+                // Try indices [2,3] first (old WebVR), then [0,1] (WebXR)
+                let x = 0, y = 0;
+                if (ax.length >= 4 && (Math.abs(ax[2]) > 0.01 || Math.abs(ax[3]) > 0.01)) {
+                    x = ax[2]; y = ax[3];
+                } else if (ax.length >= 2) {
+                    x = ax[0]; y = ax[1];
+                }
+                if (hand === 'left') { this.leftStick.x = x; this.leftStick.y = y; }
+                else { this.rightStick.x = x; this.rightStick.y = y; }
+            });
         },
         bindControllers: function() {
             if (this.controllersBound) return;
@@ -212,32 +237,11 @@
                     this.leftStick.x = e.detail.x;
                     this.leftStick.y = e.detail.y;
                 });
-                // Fallback: axismove with WebXR indices [0,1]
-                left.addEventListener('axismove', (e) => {
-                    const ax = e.detail.axis;
-                    if (ax.length >= 4 && (ax[2] !== 0 || ax[3] !== 0)) {
-                        this.leftStick.x = ax[2];
-                        this.leftStick.y = ax[3];
-                    } else if (ax.length >= 2) {
-                        this.leftStick.x = ax[0];
-                        this.leftStick.y = ax[1];
-                    }
-                });
             }
             if (right) {
                 right.addEventListener('thumbstickmoved', (e) => {
                     this.rightStick.x = e.detail.x;
                     this.rightStick.y = e.detail.y;
-                });
-                right.addEventListener('axismove', (e) => {
-                    const ax = e.detail.axis;
-                    if (ax.length >= 4 && (ax[2] !== 0 || ax[3] !== 0)) {
-                        this.rightStick.x = ax[2];
-                        this.rightStick.y = ax[3];
-                    } else if (ax.length >= 2) {
-                        this.rightStick.x = ax[0];
-                        this.rightStick.y = ax[1];
-                    }
                 });
             }
             if (left || right) {
@@ -283,11 +287,6 @@
                 this.snapReady = true;
             }
 
-            // Reset sticks to zero when idle (prevents drift)
-            this.leftStick.x *= 0.8;
-            this.leftStick.y *= 0.8;
-            this.rightStick.x *= 0.8;
-            this.rightStick.y *= 0.8;
         }
     });
 
@@ -1087,14 +1086,12 @@
         <!-- Left controller - movement -->
         <a-entity id="left-ctrl"
             laser-controls="hand: left; model: true"
-            oculus-touch-controls="hand: left"
             raycaster="objects: .clickable; far: 20; lineColor: #f5576c; lineOpacity: 0.5">
         </a-entity>
 
         <!-- Right controller - interaction -->
         <a-entity id="right-ctrl"
             laser-controls="hand: right; model: true"
-            oculus-touch-controls="hand: right"
             raycaster="objects: .clickable; far: 20; lineColor: #667eea; lineOpacity: 0.5">
         </a-entity>
     </a-entity>
