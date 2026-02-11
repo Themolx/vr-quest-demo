@@ -240,6 +240,10 @@
         <button class="vr-btn" id="enter-vr-btn">ENTER VR</button>
         <div class="vr-sub">Put on your headset and tap this button</div>
         <div class="vr-nosupport" id="vr-nosupport">WebXR not supported in this browser.<br>Use Meta Quest Browser on your Quest 2.</div>
+        <div id="vr-diagnostics" style="margin-top:20px; font-family:'Courier New',monospace; font-size:12px; color:#aaa; max-width:400px; text-align:left; line-height:1.6;"></div>
+        <div id="vr-fix-hint" style="display:none; margin-top:16px; padding:16px; background:rgba(245,87,108,0.15); border:1px solid #f5576c; border-radius:12px; max-width:400px; font-family:'Courier New',monospace; font-size:13px; color:#f5576c; text-align:left; line-height:1.6;">
+            <strong>FIX:</strong> In Quest Browser, tap the <strong>3 dots menu (⋮)</strong> at the top right, then switch from <strong>"Desktop"</strong> to <strong>"Mobile"</strong> site mode. Then reload this page.
+        </div>
     </div>
 
     <!-- HUD -->
@@ -370,35 +374,73 @@
         // Resume audio context on user interaction
         document.addEventListener('click', () => { if (audioCtx.state === 'suspended') audioCtx.resume(); }, { once: true });
 
-        // ── Enter VR splash logic ──
+        // ── Enter VR splash logic with diagnostics ──
         (function () {
             const splash = document.getElementById('enter-vr-splash');
             const btn = document.getElementById('enter-vr-btn');
             const noSupport = document.getElementById('vr-nosupport');
+            const diag = document.getElementById('vr-diagnostics');
+            const fixHint = document.getElementById('vr-fix-hint');
+
+            function log(msg, color) {
+                const line = document.createElement('div');
+                line.style.color = color || '#aaa';
+                line.textContent = '► ' + msg;
+                diag.appendChild(line);
+            }
+
+            // Detect environment
+            const ua = navigator.userAgent;
+            const isQuest = /Quest/i.test(ua) || /OculusBrowser/i.test(ua);
+            const isDesktopMode = /Windows NT|Macintosh|Linux x86/i.test(ua) && isQuest;
+            log('UserAgent: ' + ua.substring(0, 80) + '...');
+            log('Quest detected: ' + isQuest, isQuest ? '#43e97b' : '#f5576c');
+            log('HTTPS: ' + (location.protocol === 'https:'), location.protocol === 'https:' ? '#43e97b' : '#f5576c');
 
             // Check WebXR support
             if (navigator.xr) {
+                log('navigator.xr: EXISTS', '#43e97b');
                 navigator.xr.isSessionSupported('immersive-vr').then((supported) => {
+                    log('immersive-vr supported: ' + supported, supported ? '#43e97b' : '#f5576c');
                     if (!supported) {
                         noSupport.style.display = 'block';
-                        btn.style.display = 'none';
+                        noSupport.innerHTML = 'WebXR "immersive-vr" NOT supported by this browser.';
+                        fixHint.style.display = 'block';
                     }
+                }).catch((err) => {
+                    log('isSessionSupported error: ' + err.message, '#f5576c');
+                    fixHint.style.display = 'block';
                 });
             } else {
+                log('navigator.xr: MISSING', '#f5576c');
                 noSupport.style.display = 'block';
-                btn.style.display = 'none';
+                fixHint.style.display = 'block';
             }
 
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', async () => {
                 if (audioCtx.state === 'suspended') audioCtx.resume();
+                log('ENTER VR clicked...', '#667eea');
+
                 const scene = document.querySelector('a-scene');
-                if (scene) {
-                    scene.enterVR();
+                if (!scene) { log('ERROR: No a-scene found!', '#f5576c'); return; }
+                if (!scene.hasLoaded) {
+                    log('Scene not loaded yet, waiting...', '#ffd700');
+                    await new Promise(r => scene.addEventListener('loaded', r, { once: true }));
                 }
-                splash.classList.add('hidden');
+
+                try {
+                    log('Calling scene.enterVR()...', '#667eea');
+                    await scene.enterVR();
+                    log('enterVR() succeeded!', '#43e97b');
+                    splash.classList.add('hidden');
+                } catch (err) {
+                    log('enterVR() FAILED: ' + err.message, '#f5576c');
+                    log('Error name: ' + err.name, '#f5576c');
+                    fixHint.style.display = 'block';
+                }
             });
 
-            // Also hide splash if VR is entered by other means (A-Frame button)
+            // Also hide splash if VR is entered by other means
             document.addEventListener('DOMContentLoaded', () => {
                 const scene = document.querySelector('a-scene');
                 if (scene) {
