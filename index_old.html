@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>VR Demo — A-Frame + WebXR</title>
+    <meta name="description" content="Immersive VR demo with quest system">
+    <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.5.0/dist/aframe-extras.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+        }
+
+        .a-enter-vr-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            border-radius: 12px !important;
+            font-weight: 600 !important;
+            padding: 14px 28px !important;
+            font-size: 16px !important;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4) !important;
+        }
+
+        #enter-vr-splash {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 99999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(20px);
+            font-family: 'Courier New', monospace;
+            color: #fff;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+
+        #enter-vr-splash.hidden {
+            display: none;
+        }
+
+        #enter-vr-splash .vr-title {
+            font-size: 14px;
+            letter-spacing: 6px;
+            text-transform: uppercase;
+            color: #667eea;
+            margin-bottom: 24px;
+        }
+
+        #enter-vr-splash .vr-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 20px;
+            color: #fff;
+            font-family: 'Courier New', monospace;
+            font-size: 28px;
+            font-weight: bold;
+            padding: 24px 64px;
+            cursor: pointer;
+            box-shadow: 0 8px 40px rgba(102, 126, 234, 0.5);
+            letter-spacing: 4px;
+            touch-action: manipulation;
+            animation: vrPulse 2s ease-in-out infinite;
+        }
+
+        #enter-vr-splash .vr-btn:active {
+            transform: scale(0.95);
+        }
+
+        #enter-vr-splash .vr-sub {
+            margin-top: 20px;
+            font-size: 13px;
+            color: rgba(255,255,255,0.4);
+        }
+
+        #enter-vr-splash .vr-nosupport {
+            display: none;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #f5576c;
+        }
+
+        @keyframes vrPulse {
+            0%, 100% { box-shadow: 0 8px 40px rgba(102, 126, 234, 0.5); }
+            50% { box-shadow: 0 8px 60px rgba(102, 126, 234, 0.8), 0 0 80px rgba(118, 75, 162, 0.3); }
+        }
+
+        #hud {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            font-family: 'Courier New', monospace;
+            color: #fff;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(12px);
+            padding: 14px 28px;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            text-align: center;
+            pointer-events: none;
+            transition: all 0.3s ease;
+        }
+
+        #hud .quest-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            color: #667eea;
+            margin-bottom: 6px;
+        }
+
+        #hud .quest-text {
+            font-size: 15px;
+            margin-bottom: 8px;
+        }
+
+        #hud .quest-progress {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        #hud .orb-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.4s ease;
+        }
+
+        #hud .orb-dot.collected {
+            background: #43e97b;
+            border-color: #43e97b;
+            box-shadow: 0 0 10px #43e97b;
+        }
+
+        #weirdness-ui {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            font-family: 'Courier New', monospace;
+            color: #fff;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            padding: 10px 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 12px;
+        }
+
+        #weirdness-ui label {
+            opacity: 0.6;
+            font-size: 10px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        #weirdness-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 160px;
+            height: 3px;
+            background: linear-gradient(90deg, #667eea, #f093fb, #f5576c);
+            border-radius: 2px;
+            outline: none;
+        }
+
+        #weirdness-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            background: #fff;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        #weirdness-value {
+            min-width: 30px;
+            text-align: right;
+            font-weight: bold;
+            background: linear-gradient(90deg, #667eea, #f093fb);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        #notification {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            z-index: 10000;
+            font-family: 'Courier New', monospace;
+            color: #fff;
+            text-align: center;
+            pointer-events: none;
+            transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.5s ease;
+            opacity: 0;
+        }
+
+        #notification.show {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+        }
+
+        #notification .big {
+            font-size: 48px;
+            font-weight: bold;
+            text-shadow: 0 0 40px rgba(102, 126, 234, 0.8);
+        }
+
+        #notification .sub {
+            font-size: 16px;
+            color: #667eea;
+            margin-top: 8px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ENTER VR SPLASH -->
+    <div id="enter-vr-splash">
+        <div class="vr-title">VR Experience</div>
+        <button class="vr-btn" id="enter-vr-btn">ENTER VR</button>
+        <div class="vr-sub">Put on your headset and tap this button</div>
+        <div class="vr-nosupport" id="vr-nosupport">WebXR not supported in this browser.<br>Use Meta Quest Browser on your Quest 2.</div>
+        <div id="vr-diagnostics" style="margin-top:20px; font-family:'Courier New',monospace; font-size:12px; color:#aaa; max-width:400px; text-align:left; line-height:1.6;"></div>
+        <div id="vr-fix-hint" style="display:none; margin-top:16px; padding:16px; background:rgba(245,87,108,0.15); border:1px solid #f5576c; border-radius:12px; max-width:400px; font-family:'Courier New',monospace; font-size:13px; color:#f5576c; text-align:left; line-height:1.6;">
+            <strong>FIX:</strong> In Quest Browser, tap the <strong>3 dots menu (⋮)</strong> at the top right, then switch from <strong>"Desktop"</strong> to <strong>"Mobile"</strong> site mode. Then reload this page.
+        </div>
+    </div>
+
+    <!-- HUD -->
+    <div id="hud">
+        <div class="quest-title">⟡ Active Quest</div>
+        <div class="quest-text" id="quest-text">Find the 7 glowing orbs hidden in this world</div>
+        <div class="quest-progress" id="quest-dots"></div>
+    </div>
+
+    <!-- Weirdness slider -->
+    <div id="weirdness-ui">
+        <label>Weirdness</label>
+        <input type="range" id="weirdness-slider" min="0" max="100" value="0">
+        <span id="weirdness-value">0%</span>
+    </div>
+
+    <!-- Center notification -->
+    <div id="notification">
+        <div class="big" id="notif-big"></div>
+        <div class="sub" id="notif-sub"></div>
+    </div>
+
+    <script>
+        /* ═══════════════════════════════════════════════════
+           GAME ENGINE
+           ═══════════════════════════════════════════════════ */
+
+        // ── State ──
+        let WEIRDNESS = 0.0;
+        let weirdnessAutoMode = true;
+        const TOTAL_ORBS = 7;
+        let orbsCollected = 0;
+        let questComplete = false;
+
+        // ── Slider ──
+        const slider = document.getElementById('weirdness-slider');
+        const valueDisplay = document.getElementById('weirdness-value');
+        slider.addEventListener('input', (e) => {
+            WEIRDNESS = e.target.value / 100;
+            valueDisplay.textContent = Math.round(WEIRDNESS * 100) + '%';
+            weirdnessAutoMode = false;
+        });
+
+        // ── Quest HUD ──
+        const questDots = document.getElementById('quest-dots');
+        for (let i = 0; i < TOTAL_ORBS; i++) {
+            const dot = document.createElement('div');
+            dot.className = 'orb-dot';
+            dot.id = `orb-dot-${i}`;
+            questDots.appendChild(dot);
+        }
+
+        function collectOrb(index) {
+            if (questComplete) return;
+            const dot = document.getElementById(`orb-dot-${index}`);
+            if (dot && !dot.classList.contains('collected')) {
+                dot.classList.add('collected');
+                orbsCollected++;
+
+                showNotification(`✦ ${orbsCollected}/${TOTAL_ORBS}`, 'Orb collected!');
+                playSound('collect');
+
+                document.getElementById('quest-text').textContent =
+                    orbsCollected >= TOTAL_ORBS
+                        ? '✨ All orbs collected! The world awakens...'
+                        : `Find the ${TOTAL_ORBS} glowing orbs · ${orbsCollected} found`;
+
+                if (orbsCollected >= TOTAL_ORBS) {
+                    questComplete = true;
+                    setTimeout(() => {
+                        showNotification('🌀 QUEST COMPLETE', 'The weirdness is unleashed!');
+                        // Unleash full weirdness
+                        weirdnessAutoMode = false;
+                        const unleash = setInterval(() => {
+                            WEIRDNESS = Math.min(1, WEIRDNESS + 0.005);
+                            slider.value = WEIRDNESS * 100;
+                            valueDisplay.textContent = Math.round(WEIRDNESS * 100) + '%';
+                            if (WEIRDNESS >= 1) clearInterval(unleash);
+                        }, 30);
+                    }, 1500);
+                }
+            }
+        }
+
+        function showNotification(big, sub) {
+            const el = document.getElementById('notification');
+            document.getElementById('notif-big').textContent = big;
+            document.getElementById('notif-sub').textContent = sub;
+            el.classList.add('show');
+            setTimeout(() => el.classList.remove('show'), 2000);
+        }
+
+        // ── Audio Engine (Web Audio API) ──
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSound(type) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            if (type === 'collect') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(523, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(1047, audioCtx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+                osc.start(audioCtx.currentTime);
+                osc.stop(audioCtx.currentTime + 0.4);
+            } else if (type === 'interact') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(330, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(660, audioCtx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+                osc.start(audioCtx.currentTime);
+                osc.stop(audioCtx.currentTime + 0.2);
+            } else if (type === 'portal') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(110, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.8);
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1.0);
+                osc.start(audioCtx.currentTime);
+                osc.stop(audioCtx.currentTime + 1.0);
+            }
+        }
+
+        // Resume audio context on user interaction
+        document.addEventListener('click', () => { if (audioCtx.state === 'suspended') audioCtx.resume(); }, { once: true });
+
+        // ── Enter VR splash logic with diagnostics ──
+        (function () {
+            const splash = document.getElementById('enter-vr-splash');
+            const btn = document.getElementById('enter-vr-btn');
+            const noSupport = document.getElementById('vr-nosupport');
+            const diag = document.getElementById('vr-diagnostics');
+            const fixHint = document.getElementById('vr-fix-hint');
+
+            function log(msg, color) {
+                const line = document.createElement('div');
+                line.style.color = color || '#aaa';
+                line.textContent = '► ' + msg;
+                diag.appendChild(line);
+            }
+
+            // Detect environment
+            const ua = navigator.userAgent;
+            const isQuest = /Quest/i.test(ua) || /OculusBrowser/i.test(ua);
+            const isDesktopMode = /Windows NT|Macintosh|Linux x86/i.test(ua) && isQuest;
+            log('UserAgent: ' + ua.substring(0, 80) + '...');
+            log('Quest detected: ' + isQuest, isQuest ? '#43e97b' : '#f5576c');
+            log('HTTPS: ' + (location.protocol === 'https:'), location.protocol === 'https:' ? '#43e97b' : '#f5576c');
+
+            // Check WebXR support
+            if (navigator.xr) {
+                log('navigator.xr: EXISTS', '#43e97b');
+                navigator.xr.isSessionSupported('immersive-vr').then((supported) => {
+                    log('immersive-vr supported: ' + supported, supported ? '#43e97b' : '#f5576c');
+                    if (!supported) {
+                        noSupport.style.display = 'block';
+                        noSupport.innerHTML = 'WebXR "immersive-vr" NOT supported by this browser.';
+                        fixHint.style.display = 'block';
+                    }
+                }).catch((err) => {
+                    log('isSessionSupported error: ' + err.message, '#f5576c');
+                    fixHint.style.display = 'block';
+                });
+            } else {
+                log('navigator.xr: MISSING', '#f5576c');
+                noSupport.style.display = 'block';
+                fixHint.style.display = 'block';
+            }
+
+            btn.addEventListener('click', async () => {
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                log('ENTER VR clicked...', '#667eea');
+
+                const scene = document.querySelector('a-scene');
+                if (!scene) { log('ERROR: No a-scene found!', '#f5576c'); return; }
+                if (!scene.hasLoaded) {
+                    log('Scene not loaded yet, waiting...', '#ffd700');
+                    await new Promise(r => scene.addEventListener('loaded', r, { once: true }));
+                }
+
+                try {
+                    log('Calling scene.enterVR()...', '#667eea');
+                    await scene.enterVR();
+                    log('enterVR() succeeded!', '#43e97b');
+                    splash.classList.add('hidden');
+                } catch (err) {
+                    log('enterVR() FAILED: ' + err.message, '#f5576c');
+                    log('Error name: ' + err.name, '#f5576c');
+                    fixHint.style.display = 'block';
+                }
+            });
+
+            // Also hide splash if VR is entered by other means
+            document.addEventListener('DOMContentLoaded', () => {
+                const scene = document.querySelector('a-scene');
+                if (scene) {
+                    scene.addEventListener('enter-vr', () => {
+                        splash.classList.add('hidden');
+                    });
+                    scene.addEventListener('exit-vr', () => {
+                        splash.classList.remove('hidden');
+                    });
+                }
+            });
+        })();
+
+
+        /* ═══════════════════════════════════════════════════
+           A-FRAME COMPONENTS
+           ═══════════════════════════════════════════════════ */
+
+        /* ─── Collectible Orb ─── */
+        AFRAME.registerComponent('collectible-orb', {
+            schema: {
+                index: { type: 'int', default: 0 },
+                color: { type: 'color', default: '#43e97b' }
+            },
+            init: function () {
+                this.collected = false;
+                this.phase = Math.random() * Math.PI * 2;
+                this.baseY = this.el.object3D.position.y;
+
+                // Add glow light
+                const light = document.createElement('a-entity');
+                light.setAttribute('light', `type: point; color: ${this.data.color}; intensity: 1.5; distance: 6; decay: 2`);
+                this.el.appendChild(light);
+
+                // Proximity detection
+                this.camera = null;
+                this.collectDistance = 2.0;
+
+                this.el.addEventListener('click', () => this.collect());
+            },
+            tick: function (time) {
+                if (this.collected) return;
+                const t = time * 0.001;
+
+                // Bob and rotate
+                this.el.object3D.position.y = this.baseY + Math.sin(t * 1.5 + this.phase) * 0.3;
+                this.el.object3D.rotation.y = t * 1.5 + this.phase;
+                this.el.object3D.rotation.x = Math.sin(t + this.phase) * 0.3;
+
+                // Pulse scale
+                const s = 0.9 + 0.1 * Math.sin(t * 3 + this.phase);
+                this.el.object3D.scale.set(s, s, s);
+
+                // Proximity check for auto-collect
+                if (!this.camera) {
+                    this.camera = document.querySelector('#rig');
+                }
+                if (this.camera) {
+                    const camPos = new THREE.Vector3();
+                    this.camera.object3D.getWorldPosition(camPos);
+                    const orbPos = new THREE.Vector3();
+                    this.el.object3D.getWorldPosition(orbPos);
+                    if (camPos.distanceTo(orbPos) < this.collectDistance) {
+                        this.collect();
+                    }
+                }
+            },
+            collect: function () {
+                if (this.collected) return;
+                this.collected = true;
+                collectOrb(this.data.index);
+
+                // Animate out
+                this.el.setAttribute('animation__scale', 'property: scale; to: 0 0 0; dur: 400; easing: easeInBack');
+                this.el.setAttribute('animation__pos', `property: position; to: ${this.el.object3D.position.x} ${this.el.object3D.position.y + 3} ${this.el.object3D.position.z}; dur: 400; easing: easeInQuad`);
+
+                // Spawn burst particles
+                this.spawnBurst();
+
+                setTimeout(() => {
+                    this.el.parentNode.removeChild(this.el);
+                }, 500);
+            },
+            spawnBurst: function () {
+                const pos = new THREE.Vector3();
+                this.el.object3D.getWorldPosition(pos);
+                const burst = document.createElement('a-entity');
+                burst.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`);
+                burst.setAttribute('particle-burst', `color: ${this.data.color}`);
+                this.el.sceneEl.appendChild(burst);
+            }
+        });
+
+        /* ─── Particle Burst (on collect) ─── */
+        AFRAME.registerComponent('particle-burst', {
+            schema: {
+                color: { type: 'color', default: '#43e97b' }
+            },
+            init: function () {
+                this.startTime = performance.now();
+                const geo = new THREE.SphereGeometry(0.04, 4, 4);
+                this.particles = [];
+                for (let i = 0; i < 20; i++) {
+                    const mat = new THREE.MeshBasicMaterial({
+                        color: new THREE.Color(this.data.color),
+                        transparent: true, opacity: 1
+                    });
+                    const mesh = new THREE.Mesh(geo, mat);
+                    mesh.userData.vel = new THREE.Vector3(
+                        (Math.random() - 0.5) * 6,
+                        Math.random() * 4 + 2,
+                        (Math.random() - 0.5) * 6
+                    );
+                    this.el.object3D.add(mesh);
+                    this.particles.push(mesh);
+                }
+            },
+            tick: function (time, delta) {
+                const dt = delta * 0.001;
+                const elapsed = (performance.now() - this.startTime) / 1000;
+                if (elapsed > 1.5) {
+                    this.el.parentNode.removeChild(this.el);
+                    return;
+                }
+                this.particles.forEach(p => {
+                    p.position.add(p.userData.vel.clone().multiplyScalar(dt));
+                    p.userData.vel.y -= 6 * dt; // gravity
+                    p.material.opacity = Math.max(0, 1 - elapsed / 1.2);
+                });
+            }
+        });
+
+        /* ─── Interactive Object (click to activate) ─── */
+        AFRAME.registerComponent('interactive-object', {
+            schema: {
+                type: { type: 'string', default: 'spin' } // spin, grow, teleport, color-cycle
+            },
+            init: function () {
+                this.active = false;
+                this.phase = Math.random() * Math.PI * 2;
+                this.origScale = this.el.object3D.scale.clone();
+                this.origColor = null;
+                this.hueShift = 0;
+
+                this.el.addEventListener('click', () => this.activate());
+                this.el.addEventListener('mouseenter', () => {
+                    this.el.setAttribute('animation__hover', 'property: scale; to: 1.15 1.15 1.15; dur: 200; easing: easeOutQuad');
+                });
+                this.el.addEventListener('mouseleave', () => {
+                    if (!this.active) {
+                        this.el.setAttribute('animation__hover', `property: scale; to: ${this.origScale.x} ${this.origScale.y} ${this.origScale.z}; dur: 200; easing: easeOutQuad`);
+                    }
+                });
+            },
+            activate: function () {
+                this.active = !this.active;
+                playSound('interact');
+
+                if (this.data.type === 'teleport') {
+                    playSound('portal');
+                    // Teleport player to this object's position
+                    const rig = document.querySelector('#rig');
+                    const pos = this.el.object3D.position;
+                    rig.setAttribute('position', `${pos.x} 0 ${pos.z}`);
+                }
+            },
+            tick: function (time) {
+                if (!this.active) return;
+                const t = time * 0.001;
+
+                if (this.data.type === 'spin') {
+                    this.el.object3D.rotation.y += 0.05;
+                    this.el.object3D.rotation.x += 0.03;
+                }
+                if (this.data.type === 'grow') {
+                    const s = 1 + 0.5 * Math.sin(t * 2 + this.phase);
+                    this.el.object3D.scale.set(s, s, s);
+                }
+                if (this.data.type === 'color-cycle') {
+                    const mesh = this.el.getObject3D('mesh');
+                    if (mesh && mesh.material) {
+                        this.hueShift = (this.hueShift + 0.005) % 1;
+                        mesh.material.color.setHSL(this.hueShift, 0.8, 0.5);
+                        mesh.material.emissive.setHSL(this.hueShift, 0.8, 0.3);
+                    }
+                }
+            }
+        });
+
+        /* ─── Portal (teleport point) ─── */
+        AFRAME.registerComponent('portal', {
+            schema: {
+                target: { type: 'vec3', default: { x: 0, y: 0, z: 0 } },
+                color: { type: 'color', default: '#667eea' }
+            },
+            init: function () {
+                this.el.addEventListener('click', () => {
+                    playSound('portal');
+                    const rig = document.querySelector('#rig');
+                    rig.setAttribute('position', `${this.data.target.x} ${this.data.target.y} ${this.data.target.z}`);
+                    showNotification('⟡ TELEPORTED', '');
+                });
+            },
+            tick: function (time) {
+                const t = time * 0.001;
+                this.el.object3D.rotation.y = t * 0.5;
+
+                // Ring pulse
+                const children = this.el.object3D.children;
+                children.forEach(c => {
+                    if (c.material && c.material.opacity !== undefined) {
+                        c.material.opacity = 0.3 + 0.3 * Math.sin(t * 2);
+                    }
+                });
+            }
+        });
+
+        /* ─── Flashlight (attached to controller/camera) ─── */
+        AFRAME.registerComponent('flashlight', {
+            schema: {
+                on: { type: 'boolean', default: true }
+            },
+            init: function () {
+                this.lightEl = document.createElement('a-entity');
+                this.lightEl.setAttribute('light', 'type: spot; color: #ffffee; intensity: 2; distance: 20; angle: 35; penumbra: 0.3; decay: 2');
+                this.lightEl.setAttribute('position', '0 0 0');
+                this.lightEl.setAttribute('rotation', '0 0 0');
+                this.el.appendChild(this.lightEl);
+            }
+        });
+
+        /* ─── Movement Boundary (soft collision) ─── */
+        AFRAME.registerComponent('movement-boundary', {
+            schema: {
+                radius: { type: 'number', default: 25 },
+                minY: { type: 'number', default: -2 },
+                maxY: { type: 'number', default: 15 }
+            },
+            tick: function () {
+                const pos = this.el.object3D.position;
+                const dist = Math.sqrt(pos.x * pos.x + pos.z * pos.z);
+                if (dist > this.data.radius) {
+                    const angle = Math.atan2(pos.z, pos.x);
+                    pos.x = Math.cos(angle) * this.data.radius;
+                    pos.z = Math.sin(angle) * this.data.radius;
+                }
+                pos.y = Math.max(this.data.minY, Math.min(this.data.maxY, pos.y));
+            }
+        });
+
+        /* ─── Weird Material (from before) ─── */
+        AFRAME.registerComponent('weird-material', {
+            schema: {
+                autoProgress: { type: 'boolean', default: true },
+                speed: { type: 'number', default: 0.02 }
+            },
+            init: function () {
+                this.originalMaterials = new Map();
+                this.weirdMaterials = [];
+                this.el.addEventListener('model-loaded', () => this.setupMaterials());
+            },
+            setupMaterials: function () {
+                const model = this.el.getObject3D('mesh');
+                if (!model) return;
+                model.traverse((node) => {
+                    if (node.isMesh && node.material) {
+                        const origMat = node.material;
+                        this.originalMaterials.set(node.uuid, {
+                            color: origMat.color ? origMat.color.clone() : new THREE.Color(1, 1, 1),
+                            emissive: origMat.emissive ? origMat.emissive.clone() : new THREE.Color(0, 0, 0),
+                            emissiveIntensity: origMat.emissiveIntensity || 0,
+                            metalness: origMat.metalness !== undefined ? origMat.metalness : 0,
+                            roughness: origMat.roughness !== undefined ? origMat.roughness : 1,
+                            opacity: origMat.opacity || 1,
+                        });
+                        node.material = origMat.clone();
+                        node.material.needsUpdate = true;
+                        this.weirdMaterials.push({
+                            mesh: node, material: node.material,
+                            origData: this.originalMaterials.get(node.uuid),
+                            phaseOffset: Math.random() * Math.PI * 2
+                        });
+                    }
+                });
+            },
+            tick: function (time, delta) {
+                if (this.weirdMaterials.length === 0) return;
+                const t = time * 0.001;
+
+                if (this.data.autoProgress && weirdnessAutoMode) {
+                    WEIRDNESS = Math.min(1.0, WEIRDNESS + this.data.speed * delta * 0.001);
+                    slider.value = WEIRDNESS * 100;
+                    valueDisplay.textContent = Math.round(WEIRDNESS * 100) + '%';
+                }
+                const w = WEIRDNESS;
+
+                this.weirdMaterials.forEach(({ mesh, material, origData, phaseOffset }) => {
+                    if (w > 0) {
+                        const cs = Math.min(w * 4, 1);
+                        const hue = (t * 0.05 + phaseOffset) % 1;
+                        const wc = new THREE.Color().setHSL(hue, 0.8, 0.5);
+                        material.color.copy(origData.color).lerp(wc, cs * 0.5);
+                        material.emissive.copy(origData.emissive).lerp(wc, cs * 0.7);
+                        material.emissiveIntensity = origData.emissiveIntensity + cs * 1.5;
+                    }
+                    if (w > 0.25) {
+                        const ms = Math.min((w - 0.25) * 4, 1);
+                        material.metalness = THREE.MathUtils.clamp(origData.metalness + Math.sin(t * 2 + phaseOffset) * ms * 0.8, 0, 1);
+                        material.roughness = THREE.MathUtils.clamp(origData.roughness + Math.cos(t * 3 + phaseOffset) * ms * 0.5, 0, 1);
+                    }
+                    if (w > 0.5) {
+                        const da = Math.min((w - 0.5) * 4, 1);
+                        const wb = da * 0.15;
+                        mesh.scale.set(1 + Math.sin(t * 3 + phaseOffset) * wb, 1 + Math.sin(t * 3.5 + phaseOffset + 1) * wb, 1 + Math.sin(t * 4 + phaseOffset + 2) * wb);
+                        mesh.rotation.x = Math.sin(t * 0.5 + phaseOffset) * da * 0.1;
+                        mesh.rotation.z = Math.cos(t * 0.7 + phaseOffset) * da * 0.1;
+                    }
+                    if (w > 0.75) {
+                        const pa = Math.min((w - 0.75) * 4, 1);
+                        const fh = (t * 0.3 + phaseOffset) % 1;
+                        const pc = new THREE.Color().setHSL(fh, 1.0, 0.6);
+                        material.color.lerp(pc, pa * 0.8);
+                        material.emissive.copy(pc);
+                        material.emissiveIntensity = 2 + pa * 3;
+                        material.transparent = true;
+                        material.opacity = 1 - pa * 0.3 * (0.5 + 0.5 * Math.sin(t * 5 + phaseOffset));
+                        const wd = pa * 0.3;
+                        mesh.scale.set(1 + Math.sin(t * 5 + phaseOffset) * wd, 1 + Math.cos(t * 6 + phaseOffset * 2) * wd, 1 + Math.sin(t * 7 + phaseOffset * 3) * wd);
+                    }
+                    material.needsUpdate = true;
+                });
+            }
+        });
+
+        /* ─── Float ─── */
+        AFRAME.registerComponent('float', {
+            schema: { amplitude: { default: 0.3 }, speed: { default: 1 } },
+            init: function () { this.baseY = this.el.object3D.position.y; },
+            tick: function (time) { this.el.object3D.position.y = this.baseY + Math.sin(time * 0.001 * this.data.speed) * this.data.amplitude; }
+        });
+
+        /* ─── Ambient Particles ─── */
+        AFRAME.registerComponent('ambient-particles', {
+            schema: { count: { default: 80 }, spread: { default: 15 } },
+            init: function () {
+                const geo = new THREE.SphereGeometry(0.03, 4, 4);
+                this.meshes = [];
+                for (let i = 0; i < this.data.count; i++) {
+                    const hue = Math.random();
+                    const mat = new THREE.MeshBasicMaterial({ color: new THREE.Color().setHSL(hue, 0.7, 0.5), transparent: true, opacity: Math.random() * 0.4 + 0.1 });
+                    const mesh = new THREE.Mesh(geo, mat);
+                    mesh.position.set((Math.random() - 0.5) * this.data.spread, Math.random() * 6 + 0.5, (Math.random() - 0.5) * this.data.spread);
+                    mesh.userData = { speed: Math.random() * 0.3 + 0.1, baseY: mesh.position.y, phase: Math.random() * Math.PI * 2, hue };
+                    this.el.object3D.add(mesh);
+                    this.meshes.push(mesh);
+                }
+            },
+            tick: function (time) {
+                const t = time * 0.001;
+                this.meshes.forEach(m => {
+                    m.position.y = m.userData.baseY + Math.sin(t * m.userData.speed + m.userData.phase) * 0.5;
+                    if (WEIRDNESS > 0.3) {
+                        const w = (WEIRDNESS - 0.3) / 0.7;
+                        m.material.color.setHSL((m.userData.hue + t * 0.1 * w) % 1, 0.8 + w * 0.2, 0.5 + w * 0.2);
+                        const s = 1 + w * 2;
+                        m.scale.set(s, s, s);
+                    }
+                });
+            }
+        });
+
+        /* ─── Weird Light ─── */
+        AFRAME.registerComponent('weird-light', {
+            schema: { baseColor: { type: 'color', default: '#667eea' }, baseIntensity: { default: 1 } },
+            init: function () { this.phase = Math.random() * Math.PI * 2; },
+            tick: function (time) {
+                const t = time * 0.001;
+                const light = this.el.getObject3D('light');
+                if (!light) return;
+                const w = WEIRDNESS;
+                if (w > 0.1) {
+                    const a = Math.min((w - 0.1) / 0.9, 1);
+                    light.color.setHSL((t * 0.1 + this.phase) % 1, 0.8 + a * 0.2, 0.5);
+                    light.intensity = this.data.baseIntensity + a * 3 * (0.5 + 0.5 * Math.sin(t * 3 + this.phase));
+                }
+            }
+        });
+        /* ─── Quest 2 Thumbstick Locomotion + Snap Turn ─── */
+        AFRAME.registerComponent('quest-locomotion', {
+            schema: {
+                speed: { type: 'number', default: 3 },
+                snapAngle: { type: 'number', default: 45 },
+                deadzone: { type: 'number', default: 0.15 }
+            },
+            init: function () {
+                this.moveAxis = { x: 0, y: 0 };
+                this.turnAxis = 0;
+                this.turnReady = true;
+                this.direction = new THREE.Vector3();
+                this.camQuat = new THREE.Quaternion();
+                this.euler = new THREE.Euler();
+
+                // Hide HTML overlays when entering VR, show VR HUD
+                this.el.sceneEl.addEventListener('enter-vr', () => {
+                    document.getElementById('hud').style.display = 'none';
+                    document.getElementById('weirdness-ui').style.display = 'none';
+                    document.getElementById('notification').style.display = 'none';
+                    const vrHud = document.getElementById('vr-hud');
+                    if (vrHud) vrHud.setAttribute('visible', true);
+                });
+                this.el.sceneEl.addEventListener('exit-vr', () => {
+                    document.getElementById('hud').style.display = '';
+                    document.getElementById('weirdness-ui').style.display = '';
+                    document.getElementById('notification').style.display = '';
+                    const vrHud = document.getElementById('vr-hud');
+                    if (vrHud) vrHud.setAttribute('visible', false);
+                });
+
+                // Listen for thumbstick events from controllers
+                const self = this;
+                this.el.sceneEl.addEventListener('loaded', () => {
+                    const leftHand = document.getElementById('left-hand');
+                    const rightHand = document.getElementById('right-hand');
+                    if (leftHand) {
+                        leftHand.addEventListener('thumbstickmoved', (evt) => {
+                            self.moveAxis.x = evt.detail.x;
+                            self.moveAxis.y = evt.detail.y;
+                        });
+                    }
+                    if (rightHand) {
+                        rightHand.addEventListener('thumbstickmoved', (evt) => {
+                            self.turnAxis = evt.detail.x;
+                        });
+                    }
+                });
+            },
+            tick: function (time, delta) {
+                if (!this.el.sceneEl.is('vr-mode')) return;
+                const dt = delta / 1000;
+
+                // Poll XR gamepads directly as fallback
+                this.pollGamepads();
+
+                // Movement from left thumbstick
+                const mx = this.moveAxis.x;
+                const my = this.moveAxis.y;
+                if (Math.abs(mx) > this.data.deadzone || Math.abs(my) > this.data.deadzone) {
+                    const camera = this.el.querySelector('[camera]');
+                    if (camera) {
+                        camera.object3D.getWorldQuaternion(this.camQuat);
+                        this.euler.setFromQuaternion(this.camQuat, 'YXZ');
+                        this.direction.set(mx, 0, my);
+                        this.direction.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.euler.y);
+                        this.el.object3D.position.x += this.direction.x * this.data.speed * dt;
+                        this.el.object3D.position.z += this.direction.z * this.data.speed * dt;
+                    }
+                }
+
+                // Snap turn from right thumbstick
+                if (Math.abs(this.turnAxis) > 0.6) {
+                    if (this.turnReady) {
+                        this.el.object3D.rotation.y -= THREE.MathUtils.degToRad(this.data.snapAngle) * Math.sign(this.turnAxis);
+                        this.turnReady = false;
+                    }
+                } else {
+                    this.turnReady = true;
+                }
+            },
+            pollGamepads: function () {
+                const renderer = this.el.sceneEl.renderer;
+                if (!renderer || !renderer.xr) return;
+                const session = renderer.xr.getSession();
+                if (!session || !session.inputSources) return;
+                for (const source of session.inputSources) {
+                    if (!source.gamepad) continue;
+                    const axes = source.gamepad.axes;
+                    if (source.handedness === 'left' && axes.length >= 4) {
+                        this.moveAxis.x = axes[2];
+                        this.moveAxis.y = axes[3];
+                    } else if (source.handedness === 'right' && axes.length >= 4) {
+                        this.turnAxis = axes[2];
+                    }
+                }
+            }
+        });
+
+        /* ─── VR HUD (in-headset quest display) ─── */
+        AFRAME.registerComponent('vr-hud', {
+            init: function () {
+                this.questTextEl = document.getElementById('vr-quest-text');
+                this.orbDotsEl = document.getElementById('vr-orb-dots');
+                this.notifEl = document.getElementById('vr-notification');
+                this.notifTimer = null;
+                this.lastOrbCount = -1;
+
+                // Hook into showNotification for VR
+                const origShow = window.showNotification;
+                const self = this;
+                window.showNotification = function (big, sub) {
+                    origShow(big, sub);
+                    self.showVRNotification(big, sub);
+                };
+            },
+            tick: function () {
+                if (orbsCollected !== this.lastOrbCount) {
+                    this.lastOrbCount = orbsCollected;
+                    if (this.questTextEl) {
+                        const text = orbsCollected >= TOTAL_ORBS
+                            ? 'All orbs collected! The world awakens...'
+                            : `Find the ${TOTAL_ORBS} glowing orbs - ${orbsCollected} found`;
+                        this.questTextEl.setAttribute('text', 'value', text);
+                    }
+                    if (this.orbDotsEl) {
+                        let dots = '';
+                        for (let i = 0; i < TOTAL_ORBS; i++) {
+                            dots += i < orbsCollected ? '\u25CF ' : '\u25CB ';
+                        }
+                        this.orbDotsEl.setAttribute('text', 'value', dots.trim());
+                    }
+                }
+            },
+            showVRNotification: function (big, sub) {
+                if (this.notifEl) {
+                    this.notifEl.setAttribute('text', 'value', big + '\n' + sub);
+                    this.notifEl.setAttribute('visible', true);
+                    clearTimeout(this.notifTimer);
+                    this.notifTimer = setTimeout(() => {
+                        this.notifEl.setAttribute('visible', false);
+                    }, 2500);
+                }
+            }
+        });
+
+        /* ─── VR Weirdness Control (controller buttons) ─── */
+        AFRAME.registerComponent('vr-weirdness-control', {
+            init: function () {
+                // Right grip increases weirdness, left grip decreases
+                this.el.sceneEl.addEventListener('loaded', () => {
+                    const rightHand = document.getElementById('right-hand');
+                    const leftHand = document.getElementById('left-hand');
+                    if (rightHand) {
+                        rightHand.addEventListener('gripdown', () => {
+                            weirdnessAutoMode = false;
+                            WEIRDNESS = Math.min(1, WEIRDNESS + 0.1);
+                            slider.value = WEIRDNESS * 100;
+                            valueDisplay.textContent = Math.round(WEIRDNESS * 100) + '%';
+                        });
+                    }
+                    if (leftHand) {
+                        leftHand.addEventListener('gripdown', () => {
+                            weirdnessAutoMode = false;
+                            WEIRDNESS = Math.max(0, WEIRDNESS - 0.1);
+                            slider.value = WEIRDNESS * 100;
+                            valueDisplay.textContent = Math.round(WEIRDNESS * 100) + '%';
+                        });
+                    }
+                });
+            }
+        });
+    </script>
+
+    <a-scene vr-mode-ui="enabled: true" webxr="requiredFeatures: local-floor; optionalFeatures: hand-tracking"
+        renderer="antialias: true; colorManagement: true; physicallyCorrectLights: true"
+        fog="type: exponential; color: #0a0014; density: 0.008">
+        <a-assets>
+            <a-asset-item id="main-model" src="model.glb"></a-asset-item>
+        </a-assets>
+
+        <!-- Sky -->
+        <a-sky color="#050010"></a-sky>
+
+        <!-- Lights -->
+        <a-entity light="type: ambient; color: #221133; intensity: 0.4"></a-entity>
+        <a-entity position="3 4 -5" light="type: point; color: #667eea; intensity: 1.5; distance: 15; decay: 2"
+            weird-light="baseColor: #667eea; baseIntensity: 1.5"></a-entity>
+        <a-entity position="-3 3 -3" light="type: point; color: #f093fb; intensity: 1; distance: 12; decay: 2"
+            weird-light="baseColor: #f093fb; baseIntensity: 1"></a-entity>
+        <a-entity position="0 5 -6" light="type: point; color: #4facfe; intensity: 1.2; distance: 15; decay: 2"
+            weird-light="baseColor: #4facfe; baseIntensity: 1.2"></a-entity>
+        <a-entity position="0 1 -2"
+            light="type: point; color: #ffffff; intensity: 0.5; distance: 8; decay: 2"></a-entity>
+
+        <!-- ═══ ENVIRONMENT MODEL ═══ -->
+        <a-entity id="main-model-entity" gltf-model="#main-model" position="0 0 0" scale="1 1 1"
+            weird-material="autoProgress: true; speed: 0.012"></a-entity>
+
+        <!-- ═══ COLLECTIBLE ORBS (the quest!) ═══ -->
+        <!-- Scattered around the environment at various positions -->
+        <a-entity position="3 1.5 -4" collectible-orb="index: 0; color: #43e97b" class="clickable">
+            <a-octahedron radius="0.2"
+                material="color: #43e97b; emissive: #43e97b; emissiveIntensity: 0.8; transparent: true; opacity: 0.85; metalness: 0.6; roughness: 0.2"></a-octahedron>
+        </a-entity>
+
+        <a-entity position="-5 2.5 -8" collectible-orb="index: 1; color: #667eea" class="clickable">
+            <a-octahedron radius="0.2"
+                material="color: #667eea; emissive: #667eea; emissiveIntensity: 0.8; transparent: true; opacity: 0.85; metalness: 0.6; roughness: 0.2"></a-octahedron>
+        </a-entity>
+
+        <a-entity position="7 1.0 -2" collectible-orb="index: 2; color: #f093fb" class="clickable">
+            <a-octahedron radius="0.2"
+                material="color: #f093fb; emissive: #f093fb; emissiveIntensity: 0.8; transparent: true; opacity: 0.85; metalness: 0.6; roughness: 0.2"></a-octahedron>
+        </a-entity>
+
+        <a-entity position="-3 3.5 3" collectible-orb="index: 3; color: #f5576c" class="clickable">
+            <a-octahedron radius="0.2"
+                material="color: #f5576c; emissive: #f5576c; emissiveIntensity: 0.8; transparent: true; opacity: 0.85; metalness: 0.6; roughness: 0.2"></a-octahedron>
+        </a-entity>
+
+        <a-entity position="5 0.8 6" collectible-orb="index: 4; color: #4facfe" class="clickable">
+            <a-octahedron radius="0.2"
+                material="color: #4facfe; emissive: #4facfe; emissiveIntensity: 0.8; transparent: true; opacity: 0.85; metalness: 0.6; roughness: 0.2"></a-octahedron>
+        </a-entity>
+
+        <a-entity position="-8 2.0 -3" collectible-orb="index: 5; color: #ffd700" class="clickable">
+            <a-octahedron radius="0.2"
+                material="color: #ffd700; emissive: #ffd700; emissiveIntensity: 0.8; transparent: true; opacity: 0.85; metalness: 0.6; roughness: 0.2"></a-octahedron>
+        </a-entity>
+
+        <a-entity position="0 4.0 -10" collectible-orb="index: 6; color: #ff6b6b" class="clickable">
+            <a-octahedron radius="0.25"
+                material="color: #ff6b6b; emissive: #ff6b6b; emissiveIntensity: 1.0; transparent: true; opacity: 0.9; metalness: 0.7; roughness: 0.1"></a-octahedron>
+        </a-entity>
+
+        <!-- ═══ INTERACTIVE OBJECTS ═══ -->
+
+        <!-- Spinning Cube -->
+        <a-entity position="4 1.2 -6">
+            <a-box width="0.6" height="0.6" depth="0.6"
+                material="color: #764ba2; emissive: #764ba2; emissiveIntensity: 0.3; metalness: 0.8; roughness: 0.2"
+                interactive-object="type: spin" class="clickable" float="amplitude: 0.15; speed: 0.8">
+            </a-box>
+            <a-text value="CLICK ME" align="center" color="#ffffff" width="1.5" position="0 0.8 0"
+                opacity="0.5"></a-text>
+        </a-entity>
+
+        <!-- Growing Sphere -->
+        <a-entity position="-4 1.0 -5">
+            <a-sphere radius="0.35"
+                material="color: #4facfe; emissive: #4facfe; emissiveIntensity: 0.3; metalness: 0.6; roughness: 0.3; transparent: true; opacity: 0.8"
+                interactive-object="type: grow" class="clickable" float="amplitude: 0.1; speed: 0.6">
+            </a-sphere>
+            <a-text value="BREATHE" align="center" color="#4facfe" width="1.5" position="0 0.8 0"
+                opacity="0.5"></a-text>
+        </a-entity>
+
+        <!-- Color-cycling Torus -->
+        <a-entity position="2 1.5 4">
+            <a-torus radius="0.5" radius-tubular="0.08"
+                material="color: #f093fb; emissive: #f093fb; emissiveIntensity: 0.4; metalness: 0.7; roughness: 0.2"
+                interactive-object="type: color-cycle" class="clickable" rotation="45 0 0"
+                float="amplitude: 0.2; speed: 0.5">
+            </a-torus>
+            <a-text value="CHROMATIC" align="center" color="#f093fb" width="1.5" position="0 1.0 0"
+                opacity="0.5"></a-text>
+        </a-entity>
+
+        <!-- ═══ TELEPORT PORTALS ═══ -->
+
+        <!-- Portal A: near start → far area -->
+        <a-entity position="6 0.5 -1" portal="target: -6 0 -8; color: #667eea" class="clickable">
+            <a-torus radius="1" radius-tubular="0.05" rotation="0 0 0"
+                material="color: #667eea; emissive: #667eea; emissiveIntensity: 1; transparent: true; opacity: 0.5; shader: flat; side: double">
+            </a-torus>
+            <a-torus radius="0.7" radius-tubular="0.03" rotation="0 45 0"
+                material="color: #4facfe; emissive: #4facfe; emissiveIntensity: 1; transparent: true; opacity: 0.4; shader: flat; side: double">
+            </a-torus>
+            <a-sphere radius="0.6"
+                material="color: #667eea; emissive: #667eea; emissiveIntensity: 0.5; transparent: true; opacity: 0.15; shader: flat; side: double">
+            </a-sphere>
+            <a-text value="⟡ PORTAL" align="center" color="#667eea" width="2" position="0 1.5 0" opacity="0.7"></a-text>
+            <a-light type="point" color="#667eea" intensity="1.5" distance="6" decay="2"></a-light>
+        </a-entity>
+
+        <!-- Portal B: far area → back to start -->
+        <a-entity position="-6 0.5 -8" portal="target: 0 0 0; color: #f093fb" class="clickable">
+            <a-torus radius="1" radius-tubular="0.05" rotation="0 0 0"
+                material="color: #f093fb; emissive: #f093fb; emissiveIntensity: 1; transparent: true; opacity: 0.5; shader: flat; side: double">
+            </a-torus>
+            <a-torus radius="0.7" radius-tubular="0.03" rotation="0 45 0"
+                material="color: #f5576c; emissive: #f5576c; emissiveIntensity: 1; transparent: true; opacity: 0.4; shader: flat; side: double">
+            </a-torus>
+            <a-sphere radius="0.6"
+                material="color: #f093fb; emissive: #f093fb; emissiveIntensity: 0.5; transparent: true; opacity: 0.15; shader: flat; side: double">
+            </a-sphere>
+            <a-text value="⟡ RETURN" align="center" color="#f093fb" width="2" position="0 1.5 0" opacity="0.7"></a-text>
+            <a-light type="point" color="#f093fb" intensity="1.5" distance="6" decay="2"></a-light>
+        </a-entity>
+
+        <!-- ═══ AMBIENT PARTICLES ═══ -->
+        <a-entity position="0 0 0" ambient-particles="count: 100; spread: 20"></a-entity>
+
+        <!-- ═══ INSTRUCTIONS TEXT ═══ -->
+        <a-entity position="0 2.5 -3">
+            <a-text value="EXPLORE & COLLECT" align="center" color="#ffffff" width="4" font="mozillavr" opacity="0.75"
+                float="amplitude: 0.08; speed: 0.3"></a-text>
+            <a-text value="Walk into orbs or click them · Use portals to teleport" align="center" color="#667eea"
+                width="4" position="0 -0.35 0" font="mozillavr" opacity="0.55"></a-text>
+        </a-entity>
+
+        <!-- ═══ CAMERA RIG ═══ -->
+        <a-entity id="rig" position="0 0 0"
+            movement-controls="fly: false; speed: 0.15; controls: trackpad, keyboard, touch"
+            movement-boundary="radius: 25; minY: -2; maxY: 15"
+            quest-locomotion="speed: 3; snapAngle: 45"
+            vr-weirdness-control>
+
+            <a-camera position="0 1.6 0" look-controls="pointerLockEnabled: true" wasd-controls="enabled: false"
+                flashlight>
+                <!-- Gaze cursor + crosshair (desktop/mobile fallback) -->
+                <a-entity cursor="fuse: true; fuseTimeout: 1200" raycaster="objects: .clickable; far: 20"
+                    position="0 0 -1" geometry="primitive: ring; radiusInner: 0.012; radiusOuter: 0.022"
+                    material="color: #ffffff; shader: flat; opacity: 0.6"
+                    animation__click="property: scale; startEvents: click; from: 2 2 2; to: 1 1 1; dur: 200"
+                    animation__fusing="property: scale; startEvents: fusing; from: 1 1 1; to: 1.8 1.8 1.8; dur: 1200; easing: easeInCubic"
+                    animation__mouseleave="property: scale; startEvents: mouseleave; to: 1 1 1; dur: 150">
+                </a-entity>
+
+                <!-- VR HUD (visible only inside headset) -->
+                <a-entity id="vr-hud" visible="false" vr-hud position="0 0.06 -0.5">
+                    <a-plane width="0.36" height="0.13" position="0 0.01 0.001"
+                        material="color: #000000; opacity: 0.6; transparent: true; shader: flat; side: double"></a-plane>
+                    <a-text value="ACTIVE QUEST" align="center" color="#667eea" width="0.5"
+                        position="0 0.05 0" opacity="0.9"></a-text>
+                    <a-text id="vr-quest-text" value="Find the 7 glowing orbs" align="center" color="#ffffff" width="0.6"
+                        position="0 0.02 0" opacity="0.9"></a-text>
+                    <a-text id="vr-orb-dots" value="\u25CB \u25CB \u25CB \u25CB \u25CB \u25CB \u25CB" align="center" color="#43e97b" width="0.55"
+                        position="0 -0.02 0" opacity="0.8"></a-text>
+                    <a-text id="vr-notification" value="" align="center" color="#ffd700" width="0.8"
+                        position="0 -0.08 0" opacity="1" visible="false"></a-text>
+                </a-entity>
+            </a-camera>
+
+            <!-- Quest 2 Controllers with laser pointers -->
+            <a-entity id="left-hand" laser-controls="hand: left; model: true"
+                raycaster="objects: .clickable; far: 20"></a-entity>
+            <a-entity id="right-hand" laser-controls="hand: right; model: true"
+                raycaster="objects: .clickable; far: 20"></a-entity>
+        </a-entity>
+
+    </a-scene>
+</body>
+
+</html>

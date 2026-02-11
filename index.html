@@ -1,1186 +1,1070 @@
 <!DOCTYPE html>
 <html>
-
 <head>
     <meta charset="utf-8">
-    <title>VR Demo — A-Frame + WebXR</title>
-    <meta name="description" content="Immersive VR demo with quest system">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ENTROPY — Martin Tomek VR</title>
     <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.5.0/dist/aframe-extras.min.js"></script>
     <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            background: #000;
-        }
-
         .a-enter-vr-button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            background: linear-gradient(135deg, #f5576c 0%, #ff0844 100%) !important;
             border-radius: 12px !important;
             font-weight: 600 !important;
             padding: 14px 28px !important;
             font-size: 16px !important;
-            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4) !important;
         }
-
-        #enter-vr-splash {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 99999;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(20px);
-            font-family: 'Courier New', monospace;
-            color: #fff;
-            cursor: pointer;
-            touch-action: manipulation;
+        #splash {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 99999; display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            background: #000; font-family: 'Courier New', monospace;
+            color: #fff; cursor: pointer; touch-action: manipulation;
+            overflow: hidden;
         }
-
-        #enter-vr-splash.hidden {
-            display: none;
+        #splash.hidden { display: none; }
+        #splash .title {
+            font-size: 48px; font-weight: 900; letter-spacing: 12px;
+            background: linear-gradient(135deg, #f5576c, #667eea, #43e97b);
+            -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent;
+            animation: glitchTitle 3s infinite;
         }
-
-        #enter-vr-splash .vr-title {
-            font-size: 14px;
-            letter-spacing: 6px;
-            text-transform: uppercase;
-            color: #667eea;
-            margin-bottom: 24px;
+        #splash .sub {
+            font-size: 12px; letter-spacing: 4px; color: #555;
+            margin: 16px 0 40px; text-transform: uppercase;
         }
-
-        #enter-vr-splash .vr-btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border: none;
-            border-radius: 20px;
-            color: #fff;
-            font-family: 'Courier New', monospace;
-            font-size: 28px;
-            font-weight: bold;
-            padding: 24px 64px;
-            cursor: pointer;
-            box-shadow: 0 8px 40px rgba(102, 126, 234, 0.5);
-            letter-spacing: 4px;
-            touch-action: manipulation;
-            animation: vrPulse 2s ease-in-out infinite;
+        #splash .enter-btn {
+            font-family: 'Courier New', monospace; font-size: 20px;
+            font-weight: 700; letter-spacing: 6px; color: #000;
+            background: #f5576c; border: none; padding: 20px 60px;
+            cursor: pointer; text-transform: uppercase;
+            transition: all 0.3s; position: relative; overflow: hidden;
         }
-
-        #enter-vr-splash .vr-btn:active {
-            transform: scale(0.95);
+        #splash .enter-btn:hover { background: #667eea; transform: scale(1.05); }
+        #splash .enter-btn:active { transform: scale(0.95); }
+        #splash .credit {
+            position: absolute; bottom: 20px; font-size: 10px;
+            color: #333; letter-spacing: 2px;
         }
-
-        #enter-vr-splash .vr-sub {
-            margin-top: 20px;
-            font-size: 13px;
-            color: rgba(255,255,255,0.4);
+        #splash .scanline {
+            position: absolute; top: 0; left: 0; width: 100%; height: 2px;
+            background: rgba(245, 87, 108, 0.3);
+            animation: scanDown 4s linear infinite;
         }
-
-        #enter-vr-splash .vr-nosupport {
-            display: none;
-            margin-top: 20px;
-            font-size: 14px;
-            color: #f5576c;
+        @keyframes scanDown {
+            0% { top: -2px; } 100% { top: 100%; }
         }
-
-        @keyframes vrPulse {
-            0%, 100% { box-shadow: 0 8px 40px rgba(102, 126, 234, 0.5); }
-            50% { box-shadow: 0 8px 60px rgba(102, 126, 234, 0.8), 0 0 80px rgba(118, 75, 162, 0.3); }
+        @keyframes glitchTitle {
+            0%, 90%, 100% { transform: translate(0); }
+            92% { transform: translate(-4px, 2px); }
+            94% { transform: translate(4px, -2px); }
+            96% { transform: translate(-2px, -1px); }
+            98% { transform: translate(2px, 1px); }
         }
-
-        #hud {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 9999;
-            font-family: 'Courier New', monospace;
-            color: #fff;
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(12px);
-            padding: 14px 28px;
-            border-radius: 14px;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            text-align: center;
-            pointer-events: none;
-            transition: all 0.3s ease;
+        #diag {
+            margin-top: 24px; font-size: 11px; color: #444;
+            max-width: 400px; text-align: left; line-height: 1.5;
         }
-
-        #hud .quest-title {
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 3px;
-            color: #667eea;
-            margin-bottom: 6px;
-        }
-
-        #hud .quest-text {
-            font-size: 15px;
-            margin-bottom: 8px;
-        }
-
-        #hud .quest-progress {
-            display: flex;
-            gap: 8px;
-            justify-content: center;
-        }
-
-        #hud .orb-dot {
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            transition: all 0.4s ease;
-        }
-
-        #hud .orb-dot.collected {
-            background: #43e97b;
-            border-color: #43e97b;
-            box-shadow: 0 0 10px #43e97b;
-        }
-
-        #weirdness-ui {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 9999;
-            font-family: 'Courier New', monospace;
-            color: #fff;
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(10px);
-            padding: 10px 20px;
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 12px;
-        }
-
-        #weirdness-ui label {
-            opacity: 0.6;
-            font-size: 10px;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-        }
-
-        #weirdness-slider {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 160px;
-            height: 3px;
-            background: linear-gradient(90deg, #667eea, #f093fb, #f5576c);
-            border-radius: 2px;
-            outline: none;
-        }
-
-        #weirdness-slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 14px;
-            height: 14px;
-            background: #fff;
-            border-radius: 50%;
-            cursor: pointer;
-        }
-
-        #weirdness-value {
-            min-width: 30px;
-            text-align: right;
-            font-weight: bold;
-            background: linear-gradient(90deg, #667eea, #f093fb);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        #notification {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) scale(0);
-            z-index: 10000;
-            font-family: 'Courier New', monospace;
-            color: #fff;
-            text-align: center;
-            pointer-events: none;
-            transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.5s ease;
-            opacity: 0;
-        }
-
-        #notification.show {
-            transform: translate(-50%, -50%) scale(1);
-            opacity: 1;
-        }
-
-        #notification .big {
-            font-size: 48px;
-            font-weight: bold;
-            text-shadow: 0 0 40px rgba(102, 126, 234, 0.8);
-        }
-
-        #notification .sub {
-            font-size: 16px;
-            color: #667eea;
-            margin-top: 8px;
-        }
+        #diag .ok { color: #43e97b; }
+        #diag .err { color: #f5576c; }
+        #diag .info { color: #667eea; }
     </style>
 </head>
-
 <body>
 
-    <!-- ENTER VR SPLASH -->
-    <div id="enter-vr-splash">
-        <div class="vr-title">VR Experience</div>
-        <button class="vr-btn" id="enter-vr-btn">ENTER VR</button>
-        <div class="vr-sub">Put on your headset and tap this button</div>
-        <div class="vr-nosupport" id="vr-nosupport">WebXR not supported in this browser.<br>Use Meta Quest Browser on your Quest 2.</div>
-        <div id="vr-diagnostics" style="margin-top:20px; font-family:'Courier New',monospace; font-size:12px; color:#aaa; max-width:400px; text-align:left; line-height:1.6;"></div>
-        <div id="vr-fix-hint" style="display:none; margin-top:16px; padding:16px; background:rgba(245,87,108,0.15); border:1px solid #f5576c; border-radius:12px; max-width:400px; font-family:'Courier New',monospace; font-size:13px; color:#f5576c; text-align:left; line-height:1.6;">
-            <strong>FIX:</strong> In Quest Browser, tap the <strong>3 dots menu (⋮)</strong> at the top right, then switch from <strong>"Desktop"</strong> to <strong>"Mobile"</strong> site mode. Then reload this page.
-        </div>
-    </div>
+<!-- SPLASH SCREEN -->
+<div id="splash">
+    <div class="scanline"></div>
+    <div class="title">ENTROPY</div>
+    <div class="sub">A corrupted gallery by Martin Tomek</div>
+    <button class="enter-btn" id="enter-btn">ENTER VOID</button>
+    <div id="diag"></div>
+    <div class="credit">WEBXR / QUEST 2 / A-FRAME</div>
+</div>
 
-    <!-- HUD -->
-    <div id="hud">
-        <div class="quest-title">⟡ Active Quest</div>
-        <div class="quest-text" id="quest-text">Find the 7 glowing orbs hidden in this world</div>
-        <div class="quest-progress" id="quest-dots"></div>
-    </div>
+<script>
+    /* ═══════════════════════════════════════════
+       AUDIO ENGINE
+       ═══════════════════════════════════════════ */
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-    <!-- Weirdness slider -->
-    <div id="weirdness-ui">
-        <label>Weirdness</label>
-        <input type="range" id="weirdness-slider" min="0" max="100" value="0">
-        <span id="weirdness-value">0%</span>
-    </div>
+    function playGlitchSound(freq, dur, type) {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.type = type || 'sawtooth';
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(freq * 0.1, audioCtx.currentTime + dur);
+        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+        osc.start(audioCtx.currentTime);
+        osc.stop(audioCtx.currentTime + dur);
+    }
 
-    <!-- Center notification -->
-    <div id="notification">
-        <div class="big" id="notif-big"></div>
-        <div class="sub" id="notif-sub"></div>
-    </div>
+    function playDrone(freq) {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        const lfo = audioCtx.createOscillator();
+        const lfoGain = audioCtx.createGain();
+        lfo.frequency.value = 0.3;
+        lfoGain.gain.value = 10;
+        lfo.connect(lfoGain); lfoGain.connect(osc.frequency);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        gain.gain.value = 0.03;
+        lfo.start(); osc.start();
+        return { osc, gain, lfo };
+    }
 
-    <script>
-        /* ═══════════════════════════════════════════════════
-           GAME ENGINE
-           ═══════════════════════════════════════════════════ */
+    /* ═══════════════════════════════════════════
+       SPLASH / ENTER VR
+       ═══════════════════════════════════════════ */
+    (function() {
+        const splash = document.getElementById('splash');
+        const btn = document.getElementById('enter-btn');
+        const diag = document.getElementById('diag');
 
-        // ── State ──
-        let WEIRDNESS = 0.0;
-        let weirdnessAutoMode = true;
-        const TOTAL_ORBS = 7;
-        let orbsCollected = 0;
-        let questComplete = false;
-
-        // ── Slider ──
-        const slider = document.getElementById('weirdness-slider');
-        const valueDisplay = document.getElementById('weirdness-value');
-        slider.addEventListener('input', (e) => {
-            WEIRDNESS = e.target.value / 100;
-            valueDisplay.textContent = Math.round(WEIRDNESS * 100) + '%';
-            weirdnessAutoMode = false;
-        });
-
-        // ── Quest HUD ──
-        const questDots = document.getElementById('quest-dots');
-        for (let i = 0; i < TOTAL_ORBS; i++) {
-            const dot = document.createElement('div');
-            dot.className = 'orb-dot';
-            dot.id = `orb-dot-${i}`;
-            questDots.appendChild(dot);
+        function log(msg, cls) {
+            const d = document.createElement('div');
+            d.className = cls || '';
+            d.textContent = '> ' + msg;
+            diag.appendChild(d);
         }
 
-        function collectOrb(index) {
-            if (questComplete) return;
-            const dot = document.getElementById(`orb-dot-${index}`);
-            if (dot && !dot.classList.contains('collected')) {
-                dot.classList.add('collected');
-                orbsCollected++;
+        const ua = navigator.userAgent;
+        const isQuest = /Quest/i.test(ua) || /OculusBrowser/i.test(ua);
+        log('Quest: ' + (isQuest ? 'YES' : 'no (desktop)'), isQuest ? 'ok' : 'info');
+        log('HTTPS: ' + (location.protocol === 'https:'), location.protocol === 'https:' ? 'ok' : 'err');
 
-                showNotification(`✦ ${orbsCollected}/${TOTAL_ORBS}`, 'Orb collected!');
-                playSound('collect');
-
-                document.getElementById('quest-text').textContent =
-                    orbsCollected >= TOTAL_ORBS
-                        ? '✨ All orbs collected! The world awakens...'
-                        : `Find the ${TOTAL_ORBS} glowing orbs · ${orbsCollected} found`;
-
-                if (orbsCollected >= TOTAL_ORBS) {
-                    questComplete = true;
-                    setTimeout(() => {
-                        showNotification('🌀 QUEST COMPLETE', 'The weirdness is unleashed!');
-                        // Unleash full weirdness
-                        weirdnessAutoMode = false;
-                        const unleash = setInterval(() => {
-                            WEIRDNESS = Math.min(1, WEIRDNESS + 0.005);
-                            slider.value = WEIRDNESS * 100;
-                            valueDisplay.textContent = Math.round(WEIRDNESS * 100) + '%';
-                            if (WEIRDNESS >= 1) clearInterval(unleash);
-                        }, 30);
-                    }, 1500);
-                }
-            }
+        if (navigator.xr) {
+            log('WebXR: available', 'ok');
+            navigator.xr.isSessionSupported('immersive-vr').then(s => {
+                log('immersive-vr: ' + s, s ? 'ok' : 'err');
+                if (!s) log('Switch Quest Browser to Mobile mode!', 'err');
+            }).catch(e => log('XR error: ' + e.message, 'err'));
+        } else {
+            log('WebXR: not available', 'err');
         }
 
-        function showNotification(big, sub) {
-            const el = document.getElementById('notification');
-            document.getElementById('notif-big').textContent = big;
-            document.getElementById('notif-sub').textContent = sub;
-            el.classList.add('show');
-            setTimeout(() => el.classList.remove('show'), 2000);
-        }
-
-        // ── Audio Engine (Web Audio API) ──
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        function playSound(type) {
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-
-            if (type === 'collect') {
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(523, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(1047, audioCtx.currentTime + 0.15);
-                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
-                osc.start(audioCtx.currentTime);
-                osc.stop(audioCtx.currentTime + 0.4);
-            } else if (type === 'interact') {
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(330, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(660, audioCtx.currentTime + 0.1);
-                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
-                osc.start(audioCtx.currentTime);
-                osc.stop(audioCtx.currentTime + 0.2);
-            } else if (type === 'portal') {
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(110, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.8);
-                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1.0);
-                osc.start(audioCtx.currentTime);
-                osc.stop(audioCtx.currentTime + 1.0);
+        btn.addEventListener('click', async () => {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const scene = document.querySelector('a-scene');
+            if (!scene) return;
+            if (!scene.hasLoaded) {
+                log('Loading scene...', 'info');
+                await new Promise(r => scene.addEventListener('loaded', r, { once: true }));
             }
-        }
-
-        // Resume audio context on user interaction
-        document.addEventListener('click', () => { if (audioCtx.state === 'suspended') audioCtx.resume(); }, { once: true });
-
-        // ── Enter VR splash logic with diagnostics ──
-        (function () {
-            const splash = document.getElementById('enter-vr-splash');
-            const btn = document.getElementById('enter-vr-btn');
-            const noSupport = document.getElementById('vr-nosupport');
-            const diag = document.getElementById('vr-diagnostics');
-            const fixHint = document.getElementById('vr-fix-hint');
-
-            function log(msg, color) {
-                const line = document.createElement('div');
-                line.style.color = color || '#aaa';
-                line.textContent = '► ' + msg;
-                diag.appendChild(line);
-            }
-
-            // Detect environment
-            const ua = navigator.userAgent;
-            const isQuest = /Quest/i.test(ua) || /OculusBrowser/i.test(ua);
-            const isDesktopMode = /Windows NT|Macintosh|Linux x86/i.test(ua) && isQuest;
-            log('UserAgent: ' + ua.substring(0, 80) + '...');
-            log('Quest detected: ' + isQuest, isQuest ? '#43e97b' : '#f5576c');
-            log('HTTPS: ' + (location.protocol === 'https:'), location.protocol === 'https:' ? '#43e97b' : '#f5576c');
-
-            // Check WebXR support
-            if (navigator.xr) {
-                log('navigator.xr: EXISTS', '#43e97b');
-                navigator.xr.isSessionSupported('immersive-vr').then((supported) => {
-                    log('immersive-vr supported: ' + supported, supported ? '#43e97b' : '#f5576c');
-                    if (!supported) {
-                        noSupport.style.display = 'block';
-                        noSupport.innerHTML = 'WebXR "immersive-vr" NOT supported by this browser.';
-                        fixHint.style.display = 'block';
-                    }
-                }).catch((err) => {
-                    log('isSessionSupported error: ' + err.message, '#f5576c');
-                    fixHint.style.display = 'block';
-                });
-            } else {
-                log('navigator.xr: MISSING', '#f5576c');
-                noSupport.style.display = 'block';
-                fixHint.style.display = 'block';
-            }
-
-            btn.addEventListener('click', async () => {
-                if (audioCtx.state === 'suspended') audioCtx.resume();
-                log('ENTER VR clicked...', '#667eea');
-
-                const scene = document.querySelector('a-scene');
-                if (!scene) { log('ERROR: No a-scene found!', '#f5576c'); return; }
-                if (!scene.hasLoaded) {
-                    log('Scene not loaded yet, waiting...', '#ffd700');
-                    await new Promise(r => scene.addEventListener('loaded', r, { once: true }));
-                }
-
-                try {
-                    log('Calling scene.enterVR()...', '#667eea');
-                    await scene.enterVR();
-                    log('enterVR() succeeded!', '#43e97b');
-                    splash.classList.add('hidden');
-                } catch (err) {
-                    log('enterVR() FAILED: ' + err.message, '#f5576c');
-                    log('Error name: ' + err.name, '#f5576c');
-                    fixHint.style.display = 'block';
-                }
-            });
-
-            // Also hide splash if VR is entered by other means
-            document.addEventListener('DOMContentLoaded', () => {
-                const scene = document.querySelector('a-scene');
-                if (scene) {
-                    scene.addEventListener('enter-vr', () => {
-                        splash.classList.add('hidden');
-                    });
-                    scene.addEventListener('exit-vr', () => {
-                        splash.classList.remove('hidden');
-                    });
-                }
-            });
-        })();
-
-
-        /* ═══════════════════════════════════════════════════
-           A-FRAME COMPONENTS
-           ═══════════════════════════════════════════════════ */
-
-        /* ─── Collectible Orb ─── */
-        AFRAME.registerComponent('collectible-orb', {
-            schema: {
-                index: { type: 'int', default: 0 },
-                color: { type: 'color', default: '#43e97b' }
-            },
-            init: function () {
-                this.collected = false;
-                this.phase = Math.random() * Math.PI * 2;
-                this.baseY = this.el.object3D.position.y;
-
-                // Add glow light
-                const light = document.createElement('a-entity');
-                light.setAttribute('light', `type: point; color: ${this.data.color}; intensity: 1.5; distance: 6; decay: 2`);
-                this.el.appendChild(light);
-
-                // Proximity detection
-                this.camera = null;
-                this.collectDistance = 2.0;
-
-                this.el.addEventListener('click', () => this.collect());
-            },
-            tick: function (time) {
-                if (this.collected) return;
-                const t = time * 0.001;
-
-                // Bob and rotate
-                this.el.object3D.position.y = this.baseY + Math.sin(t * 1.5 + this.phase) * 0.3;
-                this.el.object3D.rotation.y = t * 1.5 + this.phase;
-                this.el.object3D.rotation.x = Math.sin(t + this.phase) * 0.3;
-
-                // Pulse scale
-                const s = 0.9 + 0.1 * Math.sin(t * 3 + this.phase);
-                this.el.object3D.scale.set(s, s, s);
-
-                // Proximity check for auto-collect
-                if (!this.camera) {
-                    this.camera = document.querySelector('#rig');
-                }
-                if (this.camera) {
-                    const camPos = new THREE.Vector3();
-                    this.camera.object3D.getWorldPosition(camPos);
-                    const orbPos = new THREE.Vector3();
-                    this.el.object3D.getWorldPosition(orbPos);
-                    if (camPos.distanceTo(orbPos) < this.collectDistance) {
-                        this.collect();
-                    }
-                }
-            },
-            collect: function () {
-                if (this.collected) return;
-                this.collected = true;
-                collectOrb(this.data.index);
-
-                // Animate out
-                this.el.setAttribute('animation__scale', 'property: scale; to: 0 0 0; dur: 400; easing: easeInBack');
-                this.el.setAttribute('animation__pos', `property: position; to: ${this.el.object3D.position.x} ${this.el.object3D.position.y + 3} ${this.el.object3D.position.z}; dur: 400; easing: easeInQuad`);
-
-                // Spawn burst particles
-                this.spawnBurst();
-
-                setTimeout(() => {
-                    this.el.parentNode.removeChild(this.el);
-                }, 500);
-            },
-            spawnBurst: function () {
-                const pos = new THREE.Vector3();
-                this.el.object3D.getWorldPosition(pos);
-                const burst = document.createElement('a-entity');
-                burst.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`);
-                burst.setAttribute('particle-burst', `color: ${this.data.color}`);
-                this.el.sceneEl.appendChild(burst);
+            try {
+                await scene.enterVR();
+                splash.classList.add('hidden');
+            } catch(e) {
+                log('VR failed: ' + e.message, 'err');
+                splash.classList.add('hidden');
             }
         });
 
-        /* ─── Particle Burst (on collect) ─── */
-        AFRAME.registerComponent('particle-burst', {
-            schema: {
-                color: { type: 'color', default: '#43e97b' }
-            },
-            init: function () {
-                this.startTime = performance.now();
-                const geo = new THREE.SphereGeometry(0.04, 4, 4);
-                this.particles = [];
-                for (let i = 0; i < 20; i++) {
-                    const mat = new THREE.MeshBasicMaterial({
-                        color: new THREE.Color(this.data.color),
-                        transparent: true, opacity: 1
-                    });
-                    const mesh = new THREE.Mesh(geo, mat);
-                    mesh.userData.vel = new THREE.Vector3(
-                        (Math.random() - 0.5) * 6,
-                        Math.random() * 4 + 2,
-                        (Math.random() - 0.5) * 6
-                    );
-                    this.el.object3D.add(mesh);
-                    this.particles.push(mesh);
-                }
-            },
-            tick: function (time, delta) {
-                const dt = delta * 0.001;
-                const elapsed = (performance.now() - this.startTime) / 1000;
-                if (elapsed > 1.5) {
-                    this.el.parentNode.removeChild(this.el);
-                    return;
-                }
-                this.particles.forEach(p => {
-                    p.position.add(p.userData.vel.clone().multiplyScalar(dt));
-                    p.userData.vel.y -= 6 * dt; // gravity
-                    p.material.opacity = Math.max(0, 1 - elapsed / 1.2);
-                });
+        document.addEventListener('DOMContentLoaded', () => {
+            const scene = document.querySelector('a-scene');
+            if (scene) {
+                scene.addEventListener('enter-vr', () => splash.classList.add('hidden'));
+                scene.addEventListener('exit-vr', () => splash.classList.remove('hidden'));
             }
         });
+    })();
 
-        /* ─── Interactive Object (click to activate) ─── */
-        AFRAME.registerComponent('interactive-object', {
-            schema: {
-                type: { type: 'string', default: 'spin' } // spin, grow, teleport, color-cycle
-            },
-            init: function () {
-                this.active = false;
-                this.phase = Math.random() * Math.PI * 2;
-                this.origScale = this.el.object3D.scale.clone();
-                this.origColor = null;
-                this.hueShift = 0;
 
-                this.el.addEventListener('click', () => this.activate());
-                this.el.addEventListener('mouseenter', () => {
-                    this.el.setAttribute('animation__hover', 'property: scale; to: 1.15 1.15 1.15; dur: 200; easing: easeOutQuad');
-                });
-                this.el.addEventListener('mouseleave', () => {
-                    if (!this.active) {
-                        this.el.setAttribute('animation__hover', `property: scale; to: ${this.origScale.x} ${this.origScale.y} ${this.origScale.z}; dur: 200; easing: easeOutQuad`);
-                    }
-                });
-            },
-            activate: function () {
-                this.active = !this.active;
-                playSound('interact');
+    /* ═══════════════════════════════════════════
+       A-FRAME COMPONENTS
+       ═══════════════════════════════════════════ */
 
-                if (this.data.type === 'teleport') {
-                    playSound('portal');
-                    // Teleport player to this object's position
-                    const rig = document.querySelector('#rig');
-                    const pos = this.el.object3D.position;
-                    rig.setAttribute('position', `${pos.x} 0 ${pos.z}`);
-                }
-            },
-            tick: function (time) {
-                if (!this.active) return;
-                const t = time * 0.001;
+    // ── Global corruption state ──
+    AFRAME.registerSystem('corruption', {
+        init: function() {
+            this.level = 0;          // 0.0 to 1.0
+            this.maxLevel = 1.0;
+        },
+        add: function(amount) {
+            this.level = Math.min(this.maxLevel, this.level + amount);
+            this.el.emit('corruption-changed', { level: this.level });
+        },
+        getLevel: function() { return this.level; }
+    });
 
-                if (this.data.type === 'spin') {
-                    this.el.object3D.rotation.y += 0.05;
-                    this.el.object3D.rotation.x += 0.03;
-                }
-                if (this.data.type === 'grow') {
-                    const s = 1 + 0.5 * Math.sin(t * 2 + this.phase);
-                    this.el.object3D.scale.set(s, s, s);
-                }
-                if (this.data.type === 'color-cycle') {
-                    const mesh = this.el.getObject3D('mesh');
-                    if (mesh && mesh.material) {
-                        this.hueShift = (this.hueShift + 0.005) % 1;
-                        mesh.material.color.setHSL(this.hueShift, 0.8, 0.5);
-                        mesh.material.emissive.setHSL(this.hueShift, 0.8, 0.3);
-                    }
-                }
-            }
-        });
+    // ── Quest 2 locomotion ──
+    AFRAME.registerComponent('quest-locomotion', {
+        schema: { speed: { default: 3 }, snapAngle: { default: 45 } },
+        init: function() {
+            this.moveVec = new THREE.Vector3();
+            this.snapReady = true;
+            this.leftStick = { x: 0, y: 0 };
+            this.rightStick = { x: 0, y: 0 };
 
-        /* ─── Portal (teleport point) ─── */
-        AFRAME.registerComponent('portal', {
-            schema: {
-                target: { type: 'vec3', default: { x: 0, y: 0, z: 0 } },
-                color: { type: 'color', default: '#667eea' }
-            },
-            init: function () {
-                this.el.addEventListener('click', () => {
-                    playSound('portal');
-                    const rig = document.querySelector('#rig');
-                    rig.setAttribute('position', `${this.data.target.x} ${this.data.target.y} ${this.data.target.z}`);
-                    showNotification('⟡ TELEPORTED', '');
-                });
-            },
-            tick: function (time) {
-                const t = time * 0.001;
-                this.el.object3D.rotation.y = t * 0.5;
-
-                // Ring pulse
-                const children = this.el.object3D.children;
-                children.forEach(c => {
-                    if (c.material && c.material.opacity !== undefined) {
-                        c.material.opacity = 0.3 + 0.3 * Math.sin(t * 2);
-                    }
-                });
-            }
-        });
-
-        /* ─── Flashlight (attached to controller/camera) ─── */
-        AFRAME.registerComponent('flashlight', {
-            schema: {
-                on: { type: 'boolean', default: true }
-            },
-            init: function () {
-                this.lightEl = document.createElement('a-entity');
-                this.lightEl.setAttribute('light', 'type: spot; color: #ffffee; intensity: 2; distance: 20; angle: 35; penumbra: 0.3; decay: 2');
-                this.lightEl.setAttribute('position', '0 0 0');
-                this.lightEl.setAttribute('rotation', '0 0 0');
-                this.el.appendChild(this.lightEl);
-            }
-        });
-
-        /* ─── Movement Boundary (soft collision) ─── */
-        AFRAME.registerComponent('movement-boundary', {
-            schema: {
-                radius: { type: 'number', default: 25 },
-                minY: { type: 'number', default: -2 },
-                maxY: { type: 'number', default: 15 }
-            },
-            tick: function () {
-                const pos = this.el.object3D.position;
-                const dist = Math.sqrt(pos.x * pos.x + pos.z * pos.z);
-                if (dist > this.data.radius) {
-                    const angle = Math.atan2(pos.z, pos.x);
-                    pos.x = Math.cos(angle) * this.data.radius;
-                    pos.z = Math.sin(angle) * this.data.radius;
-                }
-                pos.y = Math.max(this.data.minY, Math.min(this.data.maxY, pos.y));
-            }
-        });
-
-        /* ─── Weird Material (from before) ─── */
-        AFRAME.registerComponent('weird-material', {
-            schema: {
-                autoProgress: { type: 'boolean', default: true },
-                speed: { type: 'number', default: 0.02 }
-            },
-            init: function () {
-                this.originalMaterials = new Map();
-                this.weirdMaterials = [];
-                this.el.addEventListener('model-loaded', () => this.setupMaterials());
-            },
-            setupMaterials: function () {
-                const model = this.el.getObject3D('mesh');
-                if (!model) return;
-                model.traverse((node) => {
-                    if (node.isMesh && node.material) {
-                        const origMat = node.material;
-                        this.originalMaterials.set(node.uuid, {
-                            color: origMat.color ? origMat.color.clone() : new THREE.Color(1, 1, 1),
-                            emissive: origMat.emissive ? origMat.emissive.clone() : new THREE.Color(0, 0, 0),
-                            emissiveIntensity: origMat.emissiveIntensity || 0,
-                            metalness: origMat.metalness !== undefined ? origMat.metalness : 0,
-                            roughness: origMat.roughness !== undefined ? origMat.roughness : 1,
-                            opacity: origMat.opacity || 1,
-                        });
-                        node.material = origMat.clone();
-                        node.material.needsUpdate = true;
-                        this.weirdMaterials.push({
-                            mesh: node, material: node.material,
-                            origData: this.originalMaterials.get(node.uuid),
-                            phaseOffset: Math.random() * Math.PI * 2
-                        });
-                    }
-                });
-            },
-            tick: function (time, delta) {
-                if (this.weirdMaterials.length === 0) return;
-                const t = time * 0.001;
-
-                if (this.data.autoProgress && weirdnessAutoMode) {
-                    WEIRDNESS = Math.min(1.0, WEIRDNESS + this.data.speed * delta * 0.001);
-                    slider.value = WEIRDNESS * 100;
-                    valueDisplay.textContent = Math.round(WEIRDNESS * 100) + '%';
-                }
-                const w = WEIRDNESS;
-
-                this.weirdMaterials.forEach(({ mesh, material, origData, phaseOffset }) => {
-                    if (w > 0) {
-                        const cs = Math.min(w * 4, 1);
-                        const hue = (t * 0.05 + phaseOffset) % 1;
-                        const wc = new THREE.Color().setHSL(hue, 0.8, 0.5);
-                        material.color.copy(origData.color).lerp(wc, cs * 0.5);
-                        material.emissive.copy(origData.emissive).lerp(wc, cs * 0.7);
-                        material.emissiveIntensity = origData.emissiveIntensity + cs * 1.5;
-                    }
-                    if (w > 0.25) {
-                        const ms = Math.min((w - 0.25) * 4, 1);
-                        material.metalness = THREE.MathUtils.clamp(origData.metalness + Math.sin(t * 2 + phaseOffset) * ms * 0.8, 0, 1);
-                        material.roughness = THREE.MathUtils.clamp(origData.roughness + Math.cos(t * 3 + phaseOffset) * ms * 0.5, 0, 1);
-                    }
-                    if (w > 0.5) {
-                        const da = Math.min((w - 0.5) * 4, 1);
-                        const wb = da * 0.15;
-                        mesh.scale.set(1 + Math.sin(t * 3 + phaseOffset) * wb, 1 + Math.sin(t * 3.5 + phaseOffset + 1) * wb, 1 + Math.sin(t * 4 + phaseOffset + 2) * wb);
-                        mesh.rotation.x = Math.sin(t * 0.5 + phaseOffset) * da * 0.1;
-                        mesh.rotation.z = Math.cos(t * 0.7 + phaseOffset) * da * 0.1;
-                    }
-                    if (w > 0.75) {
-                        const pa = Math.min((w - 0.75) * 4, 1);
-                        const fh = (t * 0.3 + phaseOffset) % 1;
-                        const pc = new THREE.Color().setHSL(fh, 1.0, 0.6);
-                        material.color.lerp(pc, pa * 0.8);
-                        material.emissive.copy(pc);
-                        material.emissiveIntensity = 2 + pa * 3;
-                        material.transparent = true;
-                        material.opacity = 1 - pa * 0.3 * (0.5 + 0.5 * Math.sin(t * 5 + phaseOffset));
-                        const wd = pa * 0.3;
-                        mesh.scale.set(1 + Math.sin(t * 5 + phaseOffset) * wd, 1 + Math.cos(t * 6 + phaseOffset * 2) * wd, 1 + Math.sin(t * 7 + phaseOffset * 3) * wd);
-                    }
-                    material.needsUpdate = true;
-                });
-            }
-        });
-
-        /* ─── Float ─── */
-        AFRAME.registerComponent('float', {
-            schema: { amplitude: { default: 0.3 }, speed: { default: 1 } },
-            init: function () { this.baseY = this.el.object3D.position.y; },
-            tick: function (time) { this.el.object3D.position.y = this.baseY + Math.sin(time * 0.001 * this.data.speed) * this.data.amplitude; }
-        });
-
-        /* ─── Ambient Particles ─── */
-        AFRAME.registerComponent('ambient-particles', {
-            schema: { count: { default: 80 }, spread: { default: 15 } },
-            init: function () {
-                const geo = new THREE.SphereGeometry(0.03, 4, 4);
-                this.meshes = [];
-                for (let i = 0; i < this.data.count; i++) {
-                    const hue = Math.random();
-                    const mat = new THREE.MeshBasicMaterial({ color: new THREE.Color().setHSL(hue, 0.7, 0.5), transparent: true, opacity: Math.random() * 0.4 + 0.1 });
-                    const mesh = new THREE.Mesh(geo, mat);
-                    mesh.position.set((Math.random() - 0.5) * this.data.spread, Math.random() * 6 + 0.5, (Math.random() - 0.5) * this.data.spread);
-                    mesh.userData = { speed: Math.random() * 0.3 + 0.1, baseY: mesh.position.y, phase: Math.random() * Math.PI * 2, hue };
-                    this.el.object3D.add(mesh);
-                    this.meshes.push(mesh);
-                }
-            },
-            tick: function (time) {
-                const t = time * 0.001;
-                this.meshes.forEach(m => {
-                    m.position.y = m.userData.baseY + Math.sin(t * m.userData.speed + m.userData.phase) * 0.5;
-                    if (WEIRDNESS > 0.3) {
-                        const w = (WEIRDNESS - 0.3) / 0.7;
-                        m.material.color.setHSL((m.userData.hue + t * 0.1 * w) % 1, 0.8 + w * 0.2, 0.5 + w * 0.2);
-                        const s = 1 + w * 2;
-                        m.scale.set(s, s, s);
-                    }
-                });
-            }
-        });
-
-        /* ─── Weird Light ─── */
-        AFRAME.registerComponent('weird-light', {
-            schema: { baseColor: { type: 'color', default: '#667eea' }, baseIntensity: { default: 1 } },
-            init: function () { this.phase = Math.random() * Math.PI * 2; },
-            tick: function (time) {
-                const t = time * 0.001;
-                const light = this.el.getObject3D('light');
-                if (!light) return;
-                const w = WEIRDNESS;
-                if (w > 0.1) {
-                    const a = Math.min((w - 0.1) / 0.9, 1);
-                    light.color.setHSL((t * 0.1 + this.phase) % 1, 0.8 + a * 0.2, 0.5);
-                    light.intensity = this.data.baseIntensity + a * 3 * (0.5 + 0.5 * Math.sin(t * 3 + this.phase));
-                }
-            }
-        });
-        /* ─── Quest 2 Thumbstick Locomotion + Snap Turn ─── */
-        AFRAME.registerComponent('quest-locomotion', {
-            schema: {
-                speed: { type: 'number', default: 3 },
-                snapAngle: { type: 'number', default: 45 },
-                deadzone: { type: 'number', default: 0.15 }
-            },
-            init: function () {
-                this.moveAxis = { x: 0, y: 0 };
-                this.turnAxis = 0;
-                this.turnReady = true;
-                this.direction = new THREE.Vector3();
-                this.camQuat = new THREE.Quaternion();
-                this.euler = new THREE.Euler();
-
-                // Hide HTML overlays when entering VR, show VR HUD
-                this.el.sceneEl.addEventListener('enter-vr', () => {
-                    document.getElementById('hud').style.display = 'none';
-                    document.getElementById('weirdness-ui').style.display = 'none';
-                    document.getElementById('notification').style.display = 'none';
-                    const vrHud = document.getElementById('vr-hud');
-                    if (vrHud) vrHud.setAttribute('visible', true);
-                });
-                this.el.sceneEl.addEventListener('exit-vr', () => {
-                    document.getElementById('hud').style.display = '';
-                    document.getElementById('weirdness-ui').style.display = '';
-                    document.getElementById('notification').style.display = '';
-                    const vrHud = document.getElementById('vr-hud');
-                    if (vrHud) vrHud.setAttribute('visible', false);
-                });
-
-                // Listen for thumbstick events from controllers
-                const self = this;
-                this.el.sceneEl.addEventListener('loaded', () => {
-                    const leftHand = document.getElementById('left-hand');
-                    const rightHand = document.getElementById('right-hand');
-                    if (leftHand) {
-                        leftHand.addEventListener('thumbstickmoved', (evt) => {
-                            self.moveAxis.x = evt.detail.x;
-                            self.moveAxis.y = evt.detail.y;
-                        });
-                    }
-                    if (rightHand) {
-                        rightHand.addEventListener('thumbstickmoved', (evt) => {
-                            self.turnAxis = evt.detail.x;
-                        });
-                    }
-                });
-            },
-            tick: function (time, delta) {
-                if (!this.el.sceneEl.is('vr-mode')) return;
-                const dt = delta / 1000;
-
-                // Poll XR gamepads directly as fallback
-                this.pollGamepads();
-
-                // Movement from left thumbstick
-                const mx = this.moveAxis.x;
-                const my = this.moveAxis.y;
-                if (Math.abs(mx) > this.data.deadzone || Math.abs(my) > this.data.deadzone) {
-                    const camera = this.el.querySelector('[camera]');
-                    if (camera) {
-                        camera.object3D.getWorldQuaternion(this.camQuat);
-                        this.euler.setFromQuaternion(this.camQuat, 'YXZ');
-                        this.direction.set(mx, 0, my);
-                        this.direction.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.euler.y);
-                        this.el.object3D.position.x += this.direction.x * this.data.speed * dt;
-                        this.el.object3D.position.z += this.direction.z * this.data.speed * dt;
-                    }
-                }
-
-                // Snap turn from right thumbstick
-                if (Math.abs(this.turnAxis) > 0.6) {
-                    if (this.turnReady) {
-                        this.el.object3D.rotation.y -= THREE.MathUtils.degToRad(this.data.snapAngle) * Math.sign(this.turnAxis);
-                        this.turnReady = false;
-                    }
+            this.el.sceneEl.addEventListener('axismove', (e) => {
+                const hand = e.target.getAttribute('laser-controls')?.hand ||
+                             e.target.getAttribute('oculus-touch-controls')?.hand;
+                if (!hand) return;
+                if (hand === 'left') {
+                    this.leftStick.x = e.detail.axis[2] || 0;
+                    this.leftStick.y = e.detail.axis[3] || 0;
                 } else {
-                    this.turnReady = true;
+                    this.rightStick.x = e.detail.axis[2] || 0;
+                    this.rightStick.y = e.detail.axis[3] || 0;
                 }
-            },
-            pollGamepads: function () {
-                const renderer = this.el.sceneEl.renderer;
-                if (!renderer || !renderer.xr) return;
-                const session = renderer.xr.getSession();
-                if (!session || !session.inputSources) return;
-                for (const source of session.inputSources) {
-                    if (!source.gamepad) continue;
-                    const axes = source.gamepad.axes;
-                    if (source.handedness === 'left' && axes.length >= 4) {
-                        this.moveAxis.x = axes[2];
-                        this.moveAxis.y = axes[3];
-                    } else if (source.handedness === 'right' && axes.length >= 4) {
-                        this.turnAxis = axes[2];
-                    }
+            });
+        },
+        tick: function(t, dt) {
+            if (!dt) return;
+            const cam = this.el.querySelector('[camera]');
+            if (!cam) return;
+            const sec = dt / 1000;
+
+            // Movement from left stick
+            if (Math.abs(this.leftStick.x) > 0.15 || Math.abs(this.leftStick.y) > 0.15) {
+                const camObj = cam.object3D;
+                const dir = new THREE.Vector3(0, 0, -1);
+                dir.applyQuaternion(camObj.quaternion);
+                dir.y = 0; dir.normalize();
+                const right = new THREE.Vector3(1, 0, 0);
+                right.applyQuaternion(camObj.quaternion);
+                right.y = 0; right.normalize();
+
+                this.moveVec.set(0, 0, 0);
+                this.moveVec.addScaledVector(right, this.leftStick.x * this.data.speed * sec);
+                this.moveVec.addScaledVector(dir, -this.leftStick.y * this.data.speed * sec);
+                this.el.object3D.position.add(this.moveVec);
+            }
+
+            // Snap turn from right stick
+            if (Math.abs(this.rightStick.x) > 0.7) {
+                if (this.snapReady) {
+                    const angle = this.rightStick.x > 0 ? -this.data.snapAngle : this.data.snapAngle;
+                    this.el.object3D.rotation.y += THREE.MathUtils.degToRad(angle);
+                    this.snapReady = false;
+                    playGlitchSound(200 + Math.random() * 400, 0.1, 'square');
+                }
+            } else {
+                this.snapReady = true;
+            }
+        }
+    });
+
+    // ── Float animation ──
+    AFRAME.registerComponent('float', {
+        schema: {
+            amplitude: { default: 0.3 },
+            speed: { default: 1 },
+            phase: { default: 0 }
+        },
+        init: function() {
+            this.startY = this.el.object3D.position.y;
+        },
+        tick: function(t) {
+            const d = this.data;
+            this.el.object3D.position.y = this.startY +
+                Math.sin((t / 1000) * d.speed + d.phase) * d.amplitude;
+        }
+    });
+
+    // ── Slow rotation ──
+    AFRAME.registerComponent('spin', {
+        schema: {
+            x: { default: 0 }, y: { default: 0.2 }, z: { default: 0 }
+        },
+        tick: function(t, dt) {
+            if (!dt) return;
+            const s = dt / 1000;
+            this.el.object3D.rotation.x += this.data.x * s;
+            this.el.object3D.rotation.y += this.data.y * s;
+            this.el.object3D.rotation.z += this.data.z * s;
+        }
+    });
+
+    // ── Orbit around a point ──
+    AFRAME.registerComponent('orbit', {
+        schema: {
+            radius: { default: 5 },
+            speed: { default: 0.3 },
+            phase: { default: 0 },
+            tilt: { default: 0 },
+            yOffset: { default: 0 }
+        },
+        tick: function(t) {
+            const d = this.data;
+            const angle = (t / 1000) * d.speed + d.phase;
+            const tiltRad = THREE.MathUtils.degToRad(d.tilt);
+            this.el.object3D.position.x = Math.cos(angle) * d.radius;
+            this.el.object3D.position.z = Math.sin(angle) * d.radius;
+            this.el.object3D.position.y = d.yOffset + Math.sin(angle * 0.5 + tiltRad) * d.radius * 0.3;
+        }
+    });
+
+    // ── Breathing scale ──
+    AFRAME.registerComponent('breathe', {
+        schema: { speed: { default: 0.5 }, amount: { default: 0.05 } },
+        tick: function(t) {
+            const s = 1 + Math.sin(t / 1000 * this.data.speed) * this.data.amount;
+            this.el.object3D.scale.set(s, s, s);
+        }
+    });
+
+    // ── Look at player (billboard) ──
+    AFRAME.registerComponent('face-player', {
+        tick: function() {
+            const cam = this.el.sceneEl.camera;
+            if (!cam) return;
+            const pos = new THREE.Vector3();
+            cam.getWorldPosition(pos);
+            this.el.object3D.lookAt(pos);
+        }
+    });
+
+    // ── Glitch on raycaster hover ──
+    AFRAME.registerComponent('glitch-target', {
+        schema: { intensity: { default: 1 } },
+        init: function() {
+            this.originalPos = this.el.object3D.position.clone();
+            this.glitching = false;
+            this.glitchTimer = 0;
+
+            this.el.addEventListener('raycaster-intersected', () => {
+                this.glitching = true;
+                this.glitchTimer = 0;
+                this.el.sceneEl.systems.corruption.add(0.01);
+                playGlitchSound(100 + Math.random() * 800, 0.15, 'sawtooth');
+            });
+            this.el.addEventListener('raycaster-intersected-cleared', () => {
+                this.glitching = false;
+                this.el.object3D.position.copy(this.originalPos);
+            });
+        },
+        tick: function(t, dt) {
+            if (!this.glitching) return;
+            this.glitchTimer += dt;
+            const i = this.data.intensity;
+            if (Math.random() > 0.7) {
+                this.el.object3D.position.x = this.originalPos.x + (Math.random() - 0.5) * 0.1 * i;
+                this.el.object3D.position.y = this.originalPos.y + (Math.random() - 0.5) * 0.1 * i;
+            }
+            if (Math.random() > 0.9) {
+                const mesh = this.el.getObject3D('mesh');
+                if (mesh && mesh.material) {
+                    mesh.material.color.setHSL(Math.random(), 1, 0.5);
+                    setTimeout(() => {
+                        if (mesh.material) mesh.material.color.set('#ffffff');
+                    }, 100);
                 }
             }
-        });
+        }
+    });
 
-        /* ─── VR HUD (in-headset quest display) ─── */
-        AFRAME.registerComponent('vr-hud', {
-            init: function () {
-                this.questTextEl = document.getElementById('vr-quest-text');
-                this.orbDotsEl = document.getElementById('vr-orb-dots');
-                this.notifEl = document.getElementById('vr-notification');
-                this.notifTimer = null;
-                this.lastOrbCount = -1;
+    // ── Portal teleporter ──
+    AFRAME.registerComponent('portal', {
+        schema: {
+            target: { type: 'vec3', default: { x: 0, y: 0, z: 0 } },
+            color: { default: '#f5576c' }
+        },
+        init: function() {
+            this.el.addEventListener('click', () => {
+                const rig = document.getElementById('rig');
+                if (rig) {
+                    rig.object3D.position.set(
+                        this.data.target.x,
+                        this.data.target.y,
+                        this.data.target.z
+                    );
+                    playGlitchSound(80, 0.8, 'sawtooth');
+                    playGlitchSound(1200, 0.4, 'square');
 
-                // Hook into showNotification for VR
-                const origShow = window.showNotification;
-                const self = this;
-                window.showNotification = function (big, sub) {
-                    origShow(big, sub);
-                    self.showVRNotification(big, sub);
-                };
-            },
-            tick: function () {
-                if (orbsCollected !== this.lastOrbCount) {
-                    this.lastOrbCount = orbsCollected;
-                    if (this.questTextEl) {
-                        const text = orbsCollected >= TOTAL_ORBS
-                            ? 'All orbs collected! The world awakens...'
-                            : `Find the ${TOTAL_ORBS} glowing orbs - ${orbsCollected} found`;
-                        this.questTextEl.setAttribute('text', 'value', text);
-                    }
-                    if (this.orbDotsEl) {
-                        let dots = '';
-                        for (let i = 0; i < TOTAL_ORBS; i++) {
-                            dots += i < orbsCollected ? '\u25CF ' : '\u25CB ';
-                        }
-                        this.orbDotsEl.setAttribute('text', 'value', dots.trim());
+                    // Flash effect
+                    const flash = document.getElementById('flash-sphere');
+                    if (flash) {
+                        flash.object3D.visible = true;
+                        setTimeout(() => { flash.object3D.visible = false; }, 300);
                     }
                 }
-            },
-            showVRNotification: function (big, sub) {
-                if (this.notifEl) {
-                    this.notifEl.setAttribute('text', 'value', big + '\n' + sub);
-                    this.notifEl.setAttribute('visible', true);
-                    clearTimeout(this.notifTimer);
-                    this.notifTimer = setTimeout(() => {
-                        this.notifEl.setAttribute('visible', false);
-                    }, 2500);
-                }
-            }
-        });
+            });
+        }
+    });
 
-        /* ─── VR Weirdness Control (controller buttons) ─── */
-        AFRAME.registerComponent('vr-weirdness-control', {
-            init: function () {
-                // Right grip increases weirdness, left grip decreases
-                this.el.sceneEl.addEventListener('loaded', () => {
-                    const rightHand = document.getElementById('right-hand');
-                    const leftHand = document.getElementById('left-hand');
-                    if (rightHand) {
-                        rightHand.addEventListener('gripdown', () => {
-                            weirdnessAutoMode = false;
-                            WEIRDNESS = Math.min(1, WEIRDNESS + 0.1);
-                            slider.value = WEIRDNESS * 100;
-                            valueDisplay.textContent = Math.round(WEIRDNESS * 100) + '%';
-                        });
-                    }
-                    if (leftHand) {
-                        leftHand.addEventListener('gripdown', () => {
-                            weirdnessAutoMode = false;
-                            WEIRDNESS = Math.max(0, WEIRDNESS - 0.1);
-                            slider.value = WEIRDNESS * 100;
-                            valueDisplay.textContent = Math.round(WEIRDNESS * 100) + '%';
-                        });
-                    }
+    // ── Ambient particles ──
+    AFRAME.registerComponent('ambient-particles', {
+        schema: {
+            count: { default: 60 },
+            color: { default: '#f5576c' },
+            spread: { default: 20 },
+            size: { default: 0.03 }
+        },
+        init: function() {
+            const geo = new THREE.BufferGeometry();
+            const positions = new Float32Array(this.data.count * 3);
+            const velocities = [];
+            for (let i = 0; i < this.data.count; i++) {
+                positions[i * 3] = (Math.random() - 0.5) * this.data.spread;
+                positions[i * 3 + 1] = Math.random() * this.data.spread * 0.5;
+                positions[i * 3 + 2] = (Math.random() - 0.5) * this.data.spread;
+                velocities.push({
+                    x: (Math.random() - 0.5) * 0.002,
+                    y: (Math.random() - 0.5) * 0.001,
+                    z: (Math.random() - 0.5) * 0.002
                 });
             }
-        });
-    </script>
+            geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const mat = new THREE.PointsMaterial({
+                color: this.data.color,
+                size: this.data.size,
+                transparent: true,
+                opacity: 0.6,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+            this.points = new THREE.Points(geo, mat);
+            this.el.object3D.add(this.points);
+            this.velocities = velocities;
+        },
+        tick: function() {
+            const pos = this.points.geometry.attributes.position;
+            const spread = this.data.spread;
+            for (let i = 0; i < this.data.count; i++) {
+                pos.array[i * 3] += this.velocities[i].x;
+                pos.array[i * 3 + 1] += this.velocities[i].y;
+                pos.array[i * 3 + 2] += this.velocities[i].z;
+                // Wrap
+                if (Math.abs(pos.array[i * 3]) > spread / 2) this.velocities[i].x *= -1;
+                if (pos.array[i * 3 + 1] > spread * 0.5 || pos.array[i * 3 + 1] < 0) this.velocities[i].y *= -1;
+                if (Math.abs(pos.array[i * 3 + 2]) > spread / 2) this.velocities[i].z *= -1;
+            }
+            pos.needsUpdate = true;
+        }
+    });
 
-    <a-scene vr-mode-ui="enabled: true" webxr="requiredFeatures: local-floor; optionalFeatures: hand-tracking"
-        renderer="antialias: true; colorManagement: true; physicallyCorrectLights: true"
-        fog="type: exponential; color: #0a0014; density: 0.008">
-        <a-assets>
-            <a-asset-item id="main-model" src="model.glb"></a-asset-item>
-        </a-assets>
+    // ── Corruption visual overlay (RGB shift on the world) ──
+    AFRAME.registerComponent('corruption-fx', {
+        init: function() {
+            this.el.sceneEl.addEventListener('corruption-changed', (e) => {
+                const level = e.detail.level;
+                // Tint the fog
+                const scene = this.el.sceneEl.object3D;
+                if (scene.fog) {
+                    const r = 0.0 + level * 0.3;
+                    const g = 0.0;
+                    const b = 0.02 + level * 0.1;
+                    scene.fog.color.setRGB(r, g, b);
+                }
+            });
+        }
+    });
 
-        <!-- Sky -->
-        <a-sky color="#050010"></a-sky>
+    // ── Scanning light beam ──
+    AFRAME.registerComponent('scan-light', {
+        schema: { speed: { default: 0.5 }, range: { default: 10 } },
+        tick: function(t) {
+            const y = (Math.sin(t / 1000 * this.data.speed) * 0.5 + 0.5) * this.data.range;
+            this.el.object3D.position.y = y;
+        }
+    });
 
-        <!-- Lights -->
-        <a-entity light="type: ambient; color: #221133; intensity: 0.4"></a-entity>
-        <a-entity position="3 4 -5" light="type: point; color: #667eea; intensity: 1.5; distance: 15; decay: 2"
-            weird-light="baseColor: #667eea; baseIntensity: 1.5"></a-entity>
-        <a-entity position="-3 3 -3" light="type: point; color: #f093fb; intensity: 1; distance: 12; decay: 2"
-            weird-light="baseColor: #f093fb; baseIntensity: 1"></a-entity>
-        <a-entity position="0 5 -6" light="type: point; color: #4facfe; intensity: 1.2; distance: 15; decay: 2"
-            weird-light="baseColor: #4facfe; baseIntensity: 1.2"></a-entity>
-        <a-entity position="0 1 -2"
-            light="type: point; color: #ffffff; intensity: 0.5; distance: 8; decay: 2"></a-entity>
+    // ── Glitch teleport (randomly shifts position occasionally) ──
+    AFRAME.registerComponent('glitch-pos', {
+        schema: { intensity: { default: 0.5 }, freq: { default: 0.02 } },
+        init: function() {
+            this.basePos = this.el.object3D.position.clone();
+        },
+        tick: function() {
+            if (Math.random() < this.data.freq) {
+                const i = this.data.intensity;
+                this.el.object3D.position.set(
+                    this.basePos.x + (Math.random() - 0.5) * i,
+                    this.basePos.y + (Math.random() - 0.5) * i,
+                    this.basePos.z + (Math.random() - 0.5) * i
+                );
+            } else if (Math.random() < 0.01) {
+                this.el.object3D.position.copy(this.basePos);
+            }
+        }
+    });
 
-        <!-- ═══ ENVIRONMENT MODEL ═══ -->
-        <a-entity id="main-model-entity" gltf-model="#main-model" position="0 0 0" scale="1 1 1"
-            weird-material="autoProgress: true; speed: 0.012"></a-entity>
+    // ── Color cycle on material ──
+    AFRAME.registerComponent('color-cycle', {
+        schema: { speed: { default: 0.3 } },
+        tick: function(t) {
+            const mesh = this.el.getObject3D('mesh');
+            if (mesh && mesh.material && mesh.material.emissive) {
+                const hue = (t / 1000 * this.data.speed) % 1;
+                mesh.material.emissive.setHSL(hue, 0.8, 0.15);
+            }
+        }
+    });
 
-        <!-- ═══ COLLECTIBLE ORBS (the quest!) ═══ -->
-        <!-- Scattered around the environment at various positions -->
-        <a-entity position="3 1.5 -4" collectible-orb="index: 0; color: #43e97b" class="clickable">
-            <a-octahedron radius="0.2"
-                material="color: #43e97b; emissive: #43e97b; emissiveIntensity: 0.8; transparent: true; opacity: 0.85; metalness: 0.6; roughness: 0.2"></a-octahedron>
+    // ── Portal ring visual ──
+    AFRAME.registerComponent('portal-ring', {
+        schema: { color: { default: '#f5576c' } },
+        init: function() {
+            // Create ring geometry
+            const ring = document.createElement('a-torus');
+            ring.setAttribute('radius', 1.2);
+            ring.setAttribute('radius-tubular', 0.06);
+            ring.setAttribute('segments-tubular', 32);
+            ring.setAttribute('segments-radial', 12);
+            ring.setAttribute('material', `color: ${this.data.color}; emissive: ${this.data.color}; emissiveIntensity: 0.8; transparent: true; opacity: 0.9`);
+            ring.setAttribute('spin', 'x: 0; y: 0; z: 0.5');
+            this.el.appendChild(ring);
+
+            // Inner glow plane
+            const glow = document.createElement('a-circle');
+            glow.setAttribute('radius', 1.1);
+            glow.setAttribute('material', `color: ${this.data.color}; transparent: true; opacity: 0.15; side: double`);
+            glow.setAttribute('breathe', 'speed: 1; amount: 0.1');
+            this.el.appendChild(glow);
+        }
+    });
+
+    // ── Corruption orb collectible ──
+    AFRAME.registerComponent('corruption-orb', {
+        init: function() {
+            this.el.addEventListener('click', () => {
+                this.el.sceneEl.systems.corruption.add(0.08);
+                playGlitchSound(600, 0.3, 'sine');
+                playGlitchSound(150, 0.5, 'sawtooth');
+
+                // Visual burst
+                this.el.setAttribute('animation', 'property: scale; to: 0 0 0; dur: 300; easing: easeInBack');
+                setTimeout(() => this.el.parentNode?.removeChild(this.el), 400);
+            });
+        }
+    });
+
+</script>
+
+
+<!-- ═══════════════════════════════════════════════
+     A-FRAME SCENE
+     ═══════════════════════════════════════════════ -->
+<a-scene
+    fog="type: exponential; color: #020005; density: 0.015"
+    background="color: #020005"
+    renderer="antialias: true; colorManagement: true; physicallyCorrectLights: true"
+    vr-mode-ui="enabled: true"
+    corruption-fx>
+
+    <!-- ── ASSETS ── -->
+    <a-assets timeout="30000">
+        <!-- 35mm film -->
+        <img id="film01" src="art/film_01.jpg" crossorigin="anonymous">
+        <img id="film02" src="art/film_02.jpg" crossorigin="anonymous">
+        <img id="film03" src="art/film_03.jpg" crossorigin="anonymous">
+        <img id="film04" src="art/film_04.jpg" crossorigin="anonymous">
+        <img id="film05" src="art/film_05.jpg" crossorigin="anonymous">
+        <!-- Scanner -->
+        <img id="scan01" src="art/scan_01.jpg" crossorigin="anonymous">
+        <img id="scan02" src="art/scan_02.jpg" crossorigin="anonymous">
+        <img id="scan03" src="art/scan_03.jpg" crossorigin="anonymous">
+        <img id="scan04" src="art/scan_04.jpg" crossorigin="anonymous">
+        <!-- Glitch / original-copy -->
+        <img id="glitch01" src="art/glitch_01.jpg" crossorigin="anonymous">
+        <img id="glitch02" src="art/glitch_02.jpg" crossorigin="anonymous">
+        <img id="glitch03" src="art/glitch_03.jpg" crossorigin="anonymous">
+        <img id="glitch04" src="art/glitch_04.jpg" crossorigin="anonymous">
+        <img id="glitch05" src="art/glitch_05.jpg" crossorigin="anonymous">
+        <!-- Agent Chaos -->
+        <img id="chaos01" src="art/chaos_01.jpg" crossorigin="anonymous">
+        <img id="chaos02" src="art/chaos_02.jpg" crossorigin="anonymous">
+        <img id="chaos03" src="art/chaos_03.jpg" crossorigin="anonymous">
+        <!-- Street art / monster -->
+        <img id="monster01" src="art/monster_01.jpg" crossorigin="anonymous">
+        <!-- Roach game -->
+        <img id="roach01" src="art/roach_01.jpg" crossorigin="anonymous">
+        <img id="roach02" src="art/roach_02.jpg" crossorigin="anonymous">
+        <!-- Anijam -->
+        <img id="anim01" src="art/anim_01.jpg" crossorigin="anonymous">
+        <img id="anim02" src="art/anim_02.jpg" crossorigin="anonymous">
+        <!-- Other -->
+        <img id="besneni01" src="art/besneni_01.png" crossorigin="anonymous">
+        <img id="trees01" src="art/trees_01.jpg" crossorigin="anonymous">
+        <img id="sunflower01" src="art/sunflower_01.jpg" crossorigin="anonymous">
+    </a-assets>
+
+
+    <!-- ═══════════════════════════════════════════
+         ROOM 1: THE WHITE GALLERY (spawn point)
+         Origin: 0, 0, 0
+         ═══════════════════════════════════════════ -->
+    <a-entity id="room-gallery" position="0 0 0">
+        <!-- Floor -->
+        <a-plane position="0 0 0" rotation="-90 0 0" width="16" height="16"
+                 material="color: #0a0a0a; roughness: 0.9"></a-plane>
+
+        <!-- Walls -->
+        <a-box position="0 3 -8" width="16" height="6" depth="0.2"
+               material="color: #111; roughness: 0.95" breathe="speed: 0.3; amount: 0.008"></a-box>
+        <a-box position="0 3 8" width="16" height="6" depth="0.2"
+               material="color: #111; roughness: 0.95"></a-box>
+        <a-box position="-8 3 0" width="0.2" height="6" depth="16"
+               material="color: #111; roughness: 0.95" breathe="speed: 0.25; amount: 0.01"></a-box>
+        <a-box position="8 3 0" width="0.2" height="6" depth="16"
+               material="color: #111; roughness: 0.95"></a-box>
+
+        <!-- Ceiling with gap -->
+        <a-plane position="0 6 0" rotation="90 0 0" width="16" height="16"
+                 material="color: #080808; roughness: 1"></a-plane>
+
+        <!-- Gallery lighting -->
+        <a-light type="point" position="0 5 0" intensity="0.8" color="#e8dcc8" distance="15"></a-light>
+        <a-light type="ambient" intensity="0.15" color="#1a1a2e"></a-light>
+
+        <!-- 35mm photos on walls (framed) -->
+        <!-- Back wall -->
+        <a-entity position="-4 2.5 -7.8" glitch-target>
+            <a-plane width="2.2" height="3.2" material="color: #222"></a-plane>
+            <a-plane width="2" height="3" position="0 0 0.01" src="#film01"
+                     material="shader: flat"></a-plane>
+        </a-entity>
+        <a-entity position="0 2.5 -7.8" glitch-target>
+            <a-plane width="2.2" height="3.2" material="color: #222"></a-plane>
+            <a-plane width="2" height="3" position="0 0 0.01" src="#film02"
+                     material="shader: flat"></a-plane>
+        </a-entity>
+        <a-entity position="4 2.5 -7.8" glitch-target>
+            <a-plane width="2.2" height="3.2" material="color: #222"></a-plane>
+            <a-plane width="2" height="3" position="0 0 0.01" src="#film03"
+                     material="shader: flat"></a-plane>
         </a-entity>
 
-        <a-entity position="-5 2.5 -8" collectible-orb="index: 1; color: #667eea" class="clickable">
-            <a-octahedron radius="0.2"
-                material="color: #667eea; emissive: #667eea; emissiveIntensity: 0.8; transparent: true; opacity: 0.85; metalness: 0.6; roughness: 0.2"></a-octahedron>
+        <!-- Left wall -->
+        <a-entity position="-7.8 2.5 -3" rotation="0 90 0" glitch-target>
+            <a-plane width="2.2" height="3.2" material="color: #222"></a-plane>
+            <a-plane width="2" height="3" position="0 0 0.01" src="#film04"
+                     material="shader: flat"></a-plane>
+        </a-entity>
+        <a-entity position="-7.8 2.5 3" rotation="0 90 0" glitch-target>
+            <a-plane width="2.2" height="3.2" material="color: #222"></a-plane>
+            <a-plane width="2" height="3" position="0 0 0.01" src="#film05"
+                     material="shader: flat"></a-plane>
         </a-entity>
 
-        <a-entity position="7 1.0 -2" collectible-orb="index: 2; color: #f093fb" class="clickable">
-            <a-octahedron radius="0.2"
-                material="color: #f093fb; emissive: #f093fb; emissiveIntensity: 0.8; transparent: true; opacity: 0.85; metalness: 0.6; roughness: 0.2"></a-octahedron>
+        <!-- Right wall - scanner art -->
+        <a-entity position="7.8 2.5 -3" rotation="0 -90 0" glitch-target>
+            <a-plane width="2.2" height="3.2" material="color: #222"></a-plane>
+            <a-plane width="2" height="3" position="0 0 0.01" src="#scan01"
+                     material="shader: flat"></a-plane>
+        </a-entity>
+        <a-entity position="7.8 2.5 3" rotation="0 -90 0" glitch-target>
+            <a-plane width="2.2" height="3.2" material="color: #222"></a-plane>
+            <a-plane width="2" height="3" position="0 0 0.01" src="#scan02"
+                     material="shader: flat"></a-plane>
         </a-entity>
 
-        <a-entity position="-3 3.5 3" collectible-orb="index: 3; color: #f5576c" class="clickable">
-            <a-octahedron radius="0.2"
-                material="color: #f5576c; emissive: #f5576c; emissiveIntensity: 0.8; transparent: true; opacity: 0.85; metalness: 0.6; roughness: 0.2"></a-octahedron>
+        <!-- Gallery label -->
+        <a-text value="35mm" position="0 4.5 -7.7" align="center" color="#333"
+                font="monoid" width="8" letter-spacing="8"></a-text>
+
+        <!-- Corruption orbs hidden in gallery -->
+        <a-sphere position="7.5 0.5 7.5" radius="0.15"
+                  material="color: #f5576c; emissive: #f5576c; emissiveIntensity: 0.8; transparent: true; opacity: 0.8"
+                  float="amplitude: 0.1; speed: 2" corruption-orb
+                  class="clickable"></a-sphere>
+        <a-sphere position="-7.5 0.3 -7.5" radius="0.15"
+                  material="color: #667eea; emissive: #667eea; emissiveIntensity: 0.8; transparent: true; opacity: 0.8"
+                  float="amplitude: 0.15; speed: 1.5; phase: 2" corruption-orb
+                  class="clickable"></a-sphere>
+
+        <!-- Portal to Room 2 -->
+        <a-entity position="0 1.5 7.5" portal-ring="color: #f5576c"
+                  portal="target: 0 0 30" class="clickable">
+            <a-text value=">>> FEEDBACK >>>" position="0 -1.8 0" align="center"
+                    color="#f5576c" font="monoid" width="4" opacity="0.7"></a-text>
         </a-entity>
 
-        <a-entity position="5 0.8 6" collectible-orb="index: 4; color: #4facfe" class="clickable">
-            <a-octahedron radius="0.2"
-                material="color: #4facfe; emissive: #4facfe; emissiveIntensity: 0.8; transparent: true; opacity: 0.85; metalness: 0.6; roughness: 0.2"></a-octahedron>
+        <!-- Ambient particles -->
+        <a-entity ambient-particles="count: 40; color: #e8dcc8; spread: 16; size: 0.02"></a-entity>
+    </a-entity>
+
+
+    <!-- ═══════════════════════════════════════════
+         ROOM 2: FEEDBACK CATHEDRAL
+         Origin: 0, 0, 30
+         ═══════════════════════════════════════════ -->
+    <a-entity id="room-feedback" position="0 0 30">
+        <!-- Floor - tiled with scanner art -->
+        <a-plane position="0 0 0" rotation="-90 0 0" width="12" height="24"
+                 src="#scan03" material="repeat: 4 8; roughness: 0.8"></a-plane>
+
+        <!-- Tall narrow walls (cathedral proportions) -->
+        <a-box position="-6 5 0" width="0.15" height="10" depth="24"
+               material="color: #1a0020; emissive: #1a0020; emissiveIntensity: 0.3"
+               breathe="speed: 0.4; amount: 0.02"></a-box>
+        <a-box position="6 5 0" width="0.15" height="10" depth="24"
+               material="color: #1a0020; emissive: #200020; emissiveIntensity: 0.3"
+               breathe="speed: 0.35; amount: 0.02"></a-box>
+
+        <!-- Ceiling ribs -->
+        <a-box position="0 10 -8" width="12" height="0.1" depth="0.5"
+               material="color: #200030" spin="x: 0; y: 0; z: 0.01"></a-box>
+        <a-box position="0 10 -4" width="12" height="0.1" depth="0.5"
+               material="color: #200030"></a-box>
+        <a-box position="0 10 0" width="12" height="0.1" depth="0.5"
+               material="color: #200030" spin="x: 0; y: 0; z: -0.01"></a-box>
+        <a-box position="0 10 4" width="12" height="0.1" depth="0.5"
+               material="color: #200030"></a-box>
+        <a-box position="0 10 8" width="12" height="0.1" depth="0.5"
+               material="color: #200030" spin="x: 0; y: 0; z: 0.01"></a-box>
+
+        <!-- Floating glitch art panels -->
+        <a-plane position="-3 3 -8" rotation="0 20 5" width="3" height="3"
+                 src="#glitch01" material="shader: flat; transparent: true; opacity: 0.9; side: double"
+                 float="amplitude: 0.4; speed: 0.8; phase: 0"
+                 glitch-target glitch-pos="intensity: 0.3; freq: 0.05" class="clickable"></a-plane>
+
+        <a-plane position="3 5 -4" rotation="0 -15 -8" width="3" height="3"
+                 src="#glitch02" material="shader: flat; transparent: true; opacity: 0.85; side: double"
+                 float="amplitude: 0.5; speed: 0.6; phase: 1.5"
+                 glitch-target glitch-pos="intensity: 0.4; freq: 0.04" class="clickable"></a-plane>
+
+        <a-plane position="-2 4 0" rotation="0 30 10" width="4" height="4"
+                 src="#glitch03" material="shader: flat; transparent: true; opacity: 0.95; side: double"
+                 float="amplitude: 0.3; speed: 1.2; phase: 3"
+                 glitch-target glitch-pos="intensity: 0.5; freq: 0.06" class="clickable"></a-plane>
+
+        <a-plane position="4 2 4" rotation="0 -25 -5" width="2.5" height="2.5"
+                 src="#glitch04" material="shader: flat; transparent: true; opacity: 0.8; side: double"
+                 float="amplitude: 0.6; speed: 0.5; phase: 4.5"
+                 glitch-target glitch-pos="intensity: 0.3; freq: 0.03" class="clickable"></a-plane>
+
+        <a-plane position="-4 6 8" rotation="0 10 15" width="3.5" height="3.5"
+                 src="#glitch05" material="shader: flat; transparent: true; opacity: 0.7; side: double"
+                 float="amplitude: 0.5; speed: 0.7; phase: 6"
+                 glitch-target glitch-pos="intensity: 0.6; freq: 0.07" class="clickable"></a-plane>
+
+        <!-- Scanner art as wall decorations -->
+        <a-plane position="-5.8 4 -6" rotation="0 90 0" width="3" height="4"
+                 src="#scan04" material="shader: flat; side: double"
+                 glitch-target class="clickable"></a-plane>
+        <a-plane position="5.8 5 2" rotation="0 -90 0" width="3" height="4"
+                 src="#scan01" material="shader: flat; side: double"
+                 glitch-target class="clickable"></a-plane>
+
+        <!-- Lighting - dramatic pink/blue -->
+        <a-light type="point" position="-3 8 -5" intensity="1.5" color="#f5576c" distance="15"></a-light>
+        <a-light type="point" position="3 8 5" intensity="1.5" color="#667eea" distance="15"></a-light>
+        <a-light type="point" position="0 2 0" intensity="0.5" color="#43e97b" distance="8"
+                 scan-light="speed: 0.3; range: 8"></a-light>
+
+        <!-- Ambient particles - hot pink -->
+        <a-entity ambient-particles="count: 80; color: #f5576c; spread: 12; size: 0.04"></a-entity>
+        <a-entity ambient-particles="count: 40; color: #667eea; spread: 12; size: 0.03"></a-entity>
+
+        <!-- Corruption orbs -->
+        <a-sphere position="0 7 -6" radius="0.2"
+                  material="color: #43e97b; emissive: #43e97b; emissiveIntensity: 1"
+                  float="amplitude: 0.3; speed: 1" corruption-orb class="clickable"></a-sphere>
+
+        <!-- Label -->
+        <a-text value="FEEDBACK" position="0 9 -11" align="center" color="#f5576c"
+                font="monoid" width="10" letter-spacing="5" opacity="0.5"></a-text>
+
+        <!-- Portal back -->
+        <a-entity position="0 1.5 -11.5" portal-ring="color: #e8dcc8"
+                  portal="target: 0 0 2" class="clickable">
+            <a-text value="<<< GALLERY" position="0 -1.8 0" align="center"
+                    color="#e8dcc8" font="monoid" width="3" opacity="0.5"></a-text>
         </a-entity>
 
-        <a-entity position="-8 2.0 -3" collectible-orb="index: 5; color: #ffd700" class="clickable">
-            <a-octahedron radius="0.2"
-                material="color: #ffd700; emissive: #ffd700; emissiveIntensity: 0.8; transparent: true; opacity: 0.85; metalness: 0.6; roughness: 0.2"></a-octahedron>
+        <!-- Portal to Room 3 -->
+        <a-entity position="0 1.5 11.5" portal-ring="color: #43e97b"
+                  portal="target: 0 0 65" class="clickable">
+            <a-text value=">>> CHAOS >>>" position="0 -1.8 0" align="center"
+                    color="#43e97b" font="monoid" width="4" opacity="0.7"></a-text>
+        </a-entity>
+    </a-entity>
+
+
+    <!-- ═══════════════════════════════════════════
+         ROOM 3: CHAOS ARENA
+         Origin: 0, 0, 65
+         ═══════════════════════════════════════════ -->
+    <a-entity id="room-chaos" position="0 0 65">
+        <!-- No floor - floating platforms! -->
+        <a-box position="0 -0.5 0" width="4" height="1" depth="4"
+               material="color: #1a0a0a; emissive: #200000; emissiveIntensity: 0.2"
+               breathe="speed: 0.2; amount: 0.03"></a-box>
+        <a-box position="6 0 -4" width="3" height="0.5" depth="3"
+               material="color: #0a1a0a; emissive: #002000; emissiveIntensity: 0.2"
+               float="amplitude: 0.3; speed: 0.4; phase: 1"></a-box>
+        <a-box position="-5 1 5" width="3" height="0.5" depth="3"
+               material="color: #0a0a1a; emissive: #000020; emissiveIntensity: 0.2"
+               float="amplitude: 0.4; speed: 0.3; phase: 3"></a-box>
+        <a-box position="4 -1 8" width="2.5" height="0.5" depth="2.5"
+               material="color: #1a1a0a; emissive: #202000; emissiveIntensity: 0.2"
+               float="amplitude: 0.5; speed: 0.5; phase: 5"></a-box>
+        <a-box position="-7 0.5 -6" width="2" height="0.5" depth="2"
+               material="color: #1a0a1a; emissive: #200020; emissiveIntensity: 0.2"
+               float="amplitude: 0.2; speed: 0.6; phase: 2"></a-box>
+
+        <!-- Giant Agent Chaos billboard walls -->
+        <a-plane position="0 5 -12" width="16" height="9"
+                 src="#chaos01" material="shader: flat; side: double"
+                 breathe="speed: 0.15; amount: 0.02"
+                 glitch-target class="clickable"></a-plane>
+        <a-plane position="-12 5 0" rotation="0 90 0" width="16" height="9"
+                 src="#chaos02" material="shader: flat; side: double"
+                 breathe="speed: 0.2; amount: 0.015"
+                 glitch-target class="clickable"></a-plane>
+        <a-plane position="12 5 0" rotation="0 -90 0" width="16" height="9"
+                 src="#chaos03" material="shader: flat; side: double"
+                 breathe="speed: 0.18; amount: 0.025"
+                 glitch-target class="clickable"></a-plane>
+
+        <!-- GIANT street art monster billboard -->
+        <a-plane position="0 8 12" width="10" height="13"
+                 src="#monster01" material="shader: flat; side: double; transparent: true"
+                 face-player
+                 breathe="speed: 0.5; amount: 0.03"
+                 glitch-target class="clickable"></a-plane>
+
+        <!-- Floating roach game art -->
+        <a-plane position="5 3 -3" width="3" height="1.7"
+                 src="#roach01" material="shader: flat; side: double"
+                 orbit="radius: 7; speed: 0.2; phase: 0; yOffset: 3"
+                 face-player glitch-pos="intensity: 0.4; freq: 0.03"
+                 glitch-target class="clickable"></a-plane>
+        <a-plane position="-5 4 4" width="3" height="1.7"
+                 src="#roach02" material="shader: flat; side: double"
+                 orbit="radius: 8; speed: -0.15; phase: 3; yOffset: 4"
+                 face-player glitch-pos="intensity: 0.3; freq: 0.04"
+                 glitch-target class="clickable"></a-plane>
+
+        <!-- Anijam drawings floating as ghosts -->
+        <a-plane position="3 6 5" width="2.5" height="1.8"
+                 src="#anim01" material="shader: flat; side: double; transparent: true; opacity: 0.7"
+                 orbit="radius: 5; speed: 0.35; phase: 1; tilt: 30; yOffset: 5"
+                 face-player></a-plane>
+        <a-plane position="-3 7 -3" width="2.5" height="1.8"
+                 src="#anim02" material="shader: flat; side: double; transparent: true; opacity: 0.6"
+                 orbit="radius: 6; speed: -0.25; phase: 4; tilt: -20; yOffset: 6"
+                 face-player></a-plane>
+
+        <!-- Besneni cover floating ominously -->
+        <a-plane position="0 10 0" width="4" height="5"
+                 src="#besneni01" material="shader: flat; side: double; transparent: true; opacity: 0.5"
+                 spin="x: 0; y: 0.1; z: 0.05"
+                 float="amplitude: 1; speed: 0.2"
+                 glitch-target class="clickable"></a-plane>
+
+        <!-- Chaos lighting -->
+        <a-light type="point" position="0 8 0" intensity="1" color="#ff4444" distance="20"></a-light>
+        <a-light type="point" position="-8 3 -8" intensity="0.8" color="#44ff44" distance="12"></a-light>
+        <a-light type="point" position="8 3 8" intensity="0.8" color="#4444ff" distance="12"></a-light>
+
+        <!-- Many particles -->
+        <a-entity ambient-particles="count: 80; color: #ff4444; spread: 25; size: 0.05"></a-entity>
+        <a-entity ambient-particles="count: 60; color: #44ff44; spread: 25; size: 0.04"></a-entity>
+        <a-entity ambient-particles="count: 40; color: #4444ff; spread: 25; size: 0.03"></a-entity>
+
+        <!-- Corruption orbs scattered on platforms -->
+        <a-sphere position="6 1 -4" radius="0.18"
+                  material="color: #ff4444; emissive: #ff4444; emissiveIntensity: 1"
+                  float="amplitude: 0.15; speed: 2; phase: 1" corruption-orb class="clickable"></a-sphere>
+        <a-sphere position="-5 2 5" radius="0.18"
+                  material="color: #44ff44; emissive: #44ff44; emissiveIntensity: 1"
+                  float="amplitude: 0.2; speed: 1.5; phase: 3" corruption-orb class="clickable"></a-sphere>
+
+        <!-- CHAOS label -->
+        <a-text value="C H A O S" position="0 14 0" align="center" color="#ff4444"
+                font="monoid" width="20" letter-spacing="10" opacity="0.3"
+                rotation="-90 0 0"></a-text>
+
+        <!-- Portal back to Feedback -->
+        <a-entity position="0 1.5 -13" portal-ring="color: #f5576c"
+                  portal="target: 0 0 35" class="clickable">
+            <a-text value="<<< FEEDBACK" position="0 -1.8 0" align="center"
+                    color="#f5576c" font="monoid" width="3" opacity="0.5"></a-text>
         </a-entity>
 
-        <a-entity position="0 4.0 -10" collectible-orb="index: 6; color: #ff6b6b" class="clickable">
-            <a-octahedron radius="0.25"
-                material="color: #ff6b6b; emissive: #ff6b6b; emissiveIntensity: 1.0; transparent: true; opacity: 0.9; metalness: 0.7; roughness: 0.1"></a-octahedron>
+        <!-- Portal to Final Room -->
+        <a-entity position="0 1.5 13" portal-ring="color: #fff"
+                  portal="target: 0 0 100" class="clickable">
+            <a-text value=">>> ENTROPY >>>" position="0 -1.8 0" align="center"
+                    color="#fff" font="monoid" width="4" opacity="0.7"></a-text>
+        </a-entity>
+    </a-entity>
+
+
+    <!-- ═══════════════════════════════════════════
+         ROOM 4: ENTROPY — THE FINAL COLLAPSE
+         Origin: 0, 0, 100
+         ═══════════════════════════════════════════ -->
+    <a-entity id="room-entropy" position="0 0 100">
+        <!-- Invisible floor for standing -->
+        <a-plane position="0 -0.01 0" rotation="-90 0 0" width="6" height="6"
+                 material="color: #050505; transparent: true; opacity: 0.5"></a-plane>
+
+        <!-- ALL artwork orbiting in a galaxy vortex -->
+        <!-- Inner ring - fast -->
+        <a-plane width="2" height="3" src="#film01"
+                 material="shader: flat; side: double; transparent: true; opacity: 0.8"
+                 orbit="radius: 4; speed: 0.5; phase: 0; yOffset: 2" face-player
+                 glitch-target class="clickable"></a-plane>
+        <a-plane width="2" height="3" src="#film03"
+                 material="shader: flat; side: double; transparent: true; opacity: 0.75"
+                 orbit="radius: 4; speed: 0.5; phase: 2.1; yOffset: 3" face-player
+                 glitch-target class="clickable"></a-plane>
+        <a-plane width="2" height="3" src="#film05"
+                 material="shader: flat; side: double; transparent: true; opacity: 0.7"
+                 orbit="radius: 4; speed: 0.5; phase: 4.2; yOffset: 1.5" face-player
+                 glitch-target class="clickable"></a-plane>
+
+        <!-- Middle ring - medium -->
+        <a-plane width="3" height="3" src="#glitch01"
+                 material="shader: flat; side: double; transparent: true; opacity: 0.85"
+                 orbit="radius: 7; speed: 0.3; phase: 0.5; tilt: 20; yOffset: 4" face-player
+                 glitch-pos="intensity: 0.5; freq: 0.08"
+                 glitch-target class="clickable"></a-plane>
+        <a-plane width="3" height="3" src="#glitch03"
+                 material="shader: flat; side: double; transparent: true; opacity: 0.8"
+                 orbit="radius: 7; speed: 0.3; phase: 2.6; tilt: -15; yOffset: 2" face-player
+                 glitch-pos="intensity: 0.6; freq: 0.06"
+                 glitch-target class="clickable"></a-plane>
+        <a-plane width="3" height="3" src="#glitch05"
+                 material="shader: flat; side: double; transparent: true; opacity: 0.75"
+                 orbit="radius: 7; speed: 0.3; phase: 4.7; tilt: 10; yOffset: 5" face-player
+                 glitch-pos="intensity: 0.4; freq: 0.07"
+                 glitch-target class="clickable"></a-plane>
+
+        <!-- Outer ring - slow -->
+        <a-plane width="5" height="2.8" src="#chaos01"
+                 material="shader: flat; side: double; transparent: true; opacity: 0.6"
+                 orbit="radius: 11; speed: 0.15; phase: 0; tilt: 30; yOffset: 3" face-player
+                 glitch-target class="clickable"></a-plane>
+        <a-plane width="5" height="2.8" src="#chaos02"
+                 material="shader: flat; side: double; transparent: true; opacity: 0.55"
+                 orbit="radius: 11; speed: 0.15; phase: 2; tilt: -25; yOffset: 6" face-player
+                 glitch-target class="clickable"></a-plane>
+        <a-plane width="5" height="2.8" src="#chaos03"
+                 material="shader: flat; side: double; transparent: true; opacity: 0.5"
+                 orbit="radius: 11; speed: 0.15; phase: 4; tilt: 15; yOffset: 1" face-player
+                 glitch-target class="clickable"></a-plane>
+
+        <!-- Scattered extra pieces -->
+        <a-plane width="2.5" height="1.5" src="#roach01"
+                 material="shader: flat; side: double; transparent: true; opacity: 0.7"
+                 orbit="radius: 9; speed: -0.2; phase: 1; tilt: 45; yOffset: 7" face-player
+                 glitch-pos="intensity: 0.8; freq: 0.1"></a-plane>
+        <a-plane width="3" height="4" src="#monster01"
+                 material="shader: flat; side: double; transparent: true; opacity: 0.6"
+                 orbit="radius: 13; speed: -0.1; phase: 3; tilt: -10; yOffset: 5" face-player
+                 breathe="speed: 0.8; amount: 0.05"></a-plane>
+        <a-plane width="3" height="4" src="#trees01"
+                 material="shader: flat; side: double; transparent: true; opacity: 0.5"
+                 orbit="radius: 14; speed: 0.08; phase: 5; tilt: 35; yOffset: 2" face-player></a-plane>
+        <a-plane width="2.5" height="2.5" src="#sunflower01"
+                 material="shader: flat; side: double; transparent: true; opacity: 0.55"
+                 orbit="radius: 10; speed: -0.12; phase: 0.8; tilt: -40; yOffset: 8" face-player></a-plane>
+        <a-plane width="3" height="2" src="#scan01"
+                 material="shader: flat; side: double; transparent: true; opacity: 0.65"
+                 orbit="radius: 8; speed: 0.25; phase: 1.5; tilt: 25; yOffset: 0.5" face-player
+                 glitch-pos="intensity: 0.4; freq: 0.05"></a-plane>
+        <a-plane width="3" height="2" src="#scan02"
+                 material="shader: flat; side: double; transparent: true; opacity: 0.6"
+                 orbit="radius: 12; speed: -0.18; phase: 3.5; tilt: -30; yOffset: 4.5" face-player></a-plane>
+        <a-plane width="2.5" height="1.8" src="#anim01"
+                 material="shader: flat; side: double; transparent: true; opacity: 0.5"
+                 orbit="radius: 6; speed: 0.4; phase: 2.3; tilt: 50; yOffset: 6" face-player
+                 glitch-pos="intensity: 0.7; freq: 0.09"></a-plane>
+        <a-plane width="2.5" height="1.8" src="#anim02"
+                 material="shader: flat; side: double; transparent: true; opacity: 0.45"
+                 orbit="radius: 15; speed: 0.06; phase: 4.8; tilt: -55; yOffset: 9" face-player></a-plane>
+        <a-plane width="3" height="3.8" src="#besneni01"
+                 material="shader: flat; side: double; transparent: true; opacity: 0.5"
+                 orbit="radius: 9; speed: -0.22; phase: 5.5; tilt: 20; yOffset: 3.5" face-player
+                 spin="x: 0; y: 0; z: 0.02"></a-plane>
+
+        <!-- Central light pillar -->
+        <a-cylinder position="0 5 0" radius="0.05" height="15"
+                    material="color: #fff; emissive: #fff; emissiveIntensity: 2; transparent: true; opacity: 0.3"
+                    breathe="speed: 1; amount: 0.3"></a-cylinder>
+
+        <!-- Entropy lighting -->
+        <a-light type="point" position="0 5 0" intensity="2" color="#ffffff" distance="20"
+                 animation="property: light.color; from: #f5576c; to: #667eea; dur: 4000; dir: alternate; loop: true"></a-light>
+        <a-light type="point" position="0 10 0" intensity="1" color="#43e97b" distance="25"
+                 animation="property: light.intensity; from: 0.5; to: 1.5; dur: 3000; dir: alternate; loop: true"></a-light>
+
+        <!-- MASSIVE particle field -->
+        <a-entity ambient-particles="count: 100; color: #f5576c; spread: 30; size: 0.04"></a-entity>
+        <a-entity ambient-particles="count: 80; color: #667eea; spread: 30; size: 0.03"></a-entity>
+        <a-entity ambient-particles="count: 60; color: #43e97b; spread: 30; size: 0.05"></a-entity>
+        <a-entity ambient-particles="count: 40; color: #ffffff; spread: 30; size: 0.02"></a-entity>
+
+        <!-- Final corruption orb - the big one -->
+        <a-sphere position="0 5 0" radius="0.4"
+                  material="color: #fff; emissive: #fff; emissiveIntensity: 2; transparent: true; opacity: 0.6"
+                  float="amplitude: 0.5; speed: 0.8"
+                  animation="property: material.emissive; from: #f5576c; to: #43e97b; dur: 2000; dir: alternate; loop: true"
+                  corruption-orb class="clickable"></a-sphere>
+
+        <!-- ENTROPY label in the void above -->
+        <a-text value="E N T R O P Y" position="0 15 0" align="center" color="#fff"
+                font="monoid" width="25" letter-spacing="12" opacity="0.15"
+                rotation="-90 0 0"
+                spin="x: 0; y: 0.02; z: 0"></a-text>
+
+        <!-- Portal back to Chaos -->
+        <a-entity position="0 1.5 -5" portal-ring="color: #ff4444"
+                  portal="target: 0 0 70" class="clickable">
+            <a-text value="<<< CHAOS" position="0 -1.8 0" align="center"
+                    color="#ff4444" font="monoid" width="3" opacity="0.5"></a-text>
         </a-entity>
 
-        <!-- ═══ INTERACTIVE OBJECTS ═══ -->
+        <!-- Portal back to Gallery (full loop) -->
+        <a-entity position="0 1.5 5" portal-ring="color: #e8dcc8"
+                  portal="target: 0 0 2" class="clickable">
+            <a-text value=">>> RESTART >>>" position="0 -1.8 0" align="center"
+                    color="#e8dcc8" font="monoid" width="4" opacity="0.7"></a-text>
+        </a-entity>
+    </a-entity>
 
-        <!-- Spinning Cube -->
-        <a-entity position="4 1.2 -6">
-            <a-box width="0.6" height="0.6" depth="0.6"
-                material="color: #764ba2; emissive: #764ba2; emissiveIntensity: 0.3; metalness: 0.8; roughness: 0.2"
-                interactive-object="type: spin" class="clickable" float="amplitude: 0.15; speed: 0.8">
-            </a-box>
-            <a-text value="CLICK ME" align="center" color="#ffffff" width="1.5" position="0 0.8 0"
-                opacity="0.5"></a-text>
+
+    <!-- ═══════════════════════════════════════════
+         FLASH EFFECT SPHERE (hidden by default)
+         ═══════════════════════════════════════════ -->
+    <a-sphere id="flash-sphere" radius="0.5" position="0 1.6 0"
+              material="color: #fff; shader: flat; transparent: true; opacity: 0.9; side: double"
+              visible="false"></a-sphere>
+
+
+    <!-- ═══════════════════════════════════════════
+         CAMERA RIG
+         ═══════════════════════════════════════════ -->
+    <a-entity id="rig" position="0 0 2" quest-locomotion="speed: 3; snapAngle: 45">
+        <a-camera
+            look-controls="pointerLockEnabled: false"
+            wasd-controls="enabled: true"
+            position="0 1.6 0">
+        </a-camera>
+
+        <!-- Left controller - movement -->
+        <a-entity
+            laser-controls="hand: left; model: true"
+            raycaster="objects: .clickable; far: 20; lineColor: #f5576c; lineOpacity: 0.5">
         </a-entity>
 
-        <!-- Growing Sphere -->
-        <a-entity position="-4 1.0 -5">
-            <a-sphere radius="0.35"
-                material="color: #4facfe; emissive: #4facfe; emissiveIntensity: 0.3; metalness: 0.6; roughness: 0.3; transparent: true; opacity: 0.8"
-                interactive-object="type: grow" class="clickable" float="amplitude: 0.1; speed: 0.6">
-            </a-sphere>
-            <a-text value="BREATHE" align="center" color="#4facfe" width="1.5" position="0 0.8 0"
-                opacity="0.5"></a-text>
+        <!-- Right controller - interaction -->
+        <a-entity
+            laser-controls="hand: right; model: true"
+            raycaster="objects: .clickable; far: 20; lineColor: #667eea; lineOpacity: 0.5">
         </a-entity>
+    </a-entity>
 
-        <!-- Color-cycling Torus -->
-        <a-entity position="2 1.5 4">
-            <a-torus radius="0.5" radius-tubular="0.08"
-                material="color: #f093fb; emissive: #f093fb; emissiveIntensity: 0.4; metalness: 0.7; roughness: 0.2"
-                interactive-object="type: color-cycle" class="clickable" rotation="45 0 0"
-                float="amplitude: 0.2; speed: 0.5">
-            </a-torus>
-            <a-text value="CHROMATIC" align="center" color="#f093fb" width="1.5" position="0 1.0 0"
-                opacity="0.5"></a-text>
-        </a-entity>
+</a-scene>
 
-        <!-- ═══ TELEPORT PORTALS ═══ -->
+<script>
+    // Start ambient drone when entering VR
+    document.querySelector('a-scene').addEventListener('enter-vr', () => {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        playDrone(55);
+        playDrone(82.5);
+    });
+</script>
 
-        <!-- Portal A: near start → far area -->
-        <a-entity position="6 0.5 -1" portal="target: -6 0 -8; color: #667eea" class="clickable">
-            <a-torus radius="1" radius-tubular="0.05" rotation="0 0 0"
-                material="color: #667eea; emissive: #667eea; emissiveIntensity: 1; transparent: true; opacity: 0.5; shader: flat; side: double">
-            </a-torus>
-            <a-torus radius="0.7" radius-tubular="0.03" rotation="0 45 0"
-                material="color: #4facfe; emissive: #4facfe; emissiveIntensity: 1; transparent: true; opacity: 0.4; shader: flat; side: double">
-            </a-torus>
-            <a-sphere radius="0.6"
-                material="color: #667eea; emissive: #667eea; emissiveIntensity: 0.5; transparent: true; opacity: 0.15; shader: flat; side: double">
-            </a-sphere>
-            <a-text value="⟡ PORTAL" align="center" color="#667eea" width="2" position="0 1.5 0" opacity="0.7"></a-text>
-            <a-light type="point" color="#667eea" intensity="1.5" distance="6" decay="2"></a-light>
-        </a-entity>
-
-        <!-- Portal B: far area → back to start -->
-        <a-entity position="-6 0.5 -8" portal="target: 0 0 0; color: #f093fb" class="clickable">
-            <a-torus radius="1" radius-tubular="0.05" rotation="0 0 0"
-                material="color: #f093fb; emissive: #f093fb; emissiveIntensity: 1; transparent: true; opacity: 0.5; shader: flat; side: double">
-            </a-torus>
-            <a-torus radius="0.7" radius-tubular="0.03" rotation="0 45 0"
-                material="color: #f5576c; emissive: #f5576c; emissiveIntensity: 1; transparent: true; opacity: 0.4; shader: flat; side: double">
-            </a-torus>
-            <a-sphere radius="0.6"
-                material="color: #f093fb; emissive: #f093fb; emissiveIntensity: 0.5; transparent: true; opacity: 0.15; shader: flat; side: double">
-            </a-sphere>
-            <a-text value="⟡ RETURN" align="center" color="#f093fb" width="2" position="0 1.5 0" opacity="0.7"></a-text>
-            <a-light type="point" color="#f093fb" intensity="1.5" distance="6" decay="2"></a-light>
-        </a-entity>
-
-        <!-- ═══ AMBIENT PARTICLES ═══ -->
-        <a-entity position="0 0 0" ambient-particles="count: 100; spread: 20"></a-entity>
-
-        <!-- ═══ INSTRUCTIONS TEXT ═══ -->
-        <a-entity position="0 2.5 -3">
-            <a-text value="EXPLORE & COLLECT" align="center" color="#ffffff" width="4" font="mozillavr" opacity="0.75"
-                float="amplitude: 0.08; speed: 0.3"></a-text>
-            <a-text value="Walk into orbs or click them · Use portals to teleport" align="center" color="#667eea"
-                width="4" position="0 -0.35 0" font="mozillavr" opacity="0.55"></a-text>
-        </a-entity>
-
-        <!-- ═══ CAMERA RIG ═══ -->
-        <a-entity id="rig" position="0 0 0"
-            movement-controls="fly: false; speed: 0.15; controls: trackpad, keyboard, touch"
-            movement-boundary="radius: 25; minY: -2; maxY: 15"
-            quest-locomotion="speed: 3; snapAngle: 45"
-            vr-weirdness-control>
-
-            <a-camera position="0 1.6 0" look-controls="pointerLockEnabled: true" wasd-controls="enabled: false"
-                flashlight>
-                <!-- Gaze cursor + crosshair (desktop/mobile fallback) -->
-                <a-entity cursor="fuse: true; fuseTimeout: 1200" raycaster="objects: .clickable; far: 20"
-                    position="0 0 -1" geometry="primitive: ring; radiusInner: 0.012; radiusOuter: 0.022"
-                    material="color: #ffffff; shader: flat; opacity: 0.6"
-                    animation__click="property: scale; startEvents: click; from: 2 2 2; to: 1 1 1; dur: 200"
-                    animation__fusing="property: scale; startEvents: fusing; from: 1 1 1; to: 1.8 1.8 1.8; dur: 1200; easing: easeInCubic"
-                    animation__mouseleave="property: scale; startEvents: mouseleave; to: 1 1 1; dur: 150">
-                </a-entity>
-
-                <!-- VR HUD (visible only inside headset) -->
-                <a-entity id="vr-hud" visible="false" vr-hud position="0 0.06 -0.5">
-                    <a-plane width="0.36" height="0.13" position="0 0.01 0.001"
-                        material="color: #000000; opacity: 0.6; transparent: true; shader: flat; side: double"></a-plane>
-                    <a-text value="ACTIVE QUEST" align="center" color="#667eea" width="0.5"
-                        position="0 0.05 0" opacity="0.9"></a-text>
-                    <a-text id="vr-quest-text" value="Find the 7 glowing orbs" align="center" color="#ffffff" width="0.6"
-                        position="0 0.02 0" opacity="0.9"></a-text>
-                    <a-text id="vr-orb-dots" value="\u25CB \u25CB \u25CB \u25CB \u25CB \u25CB \u25CB" align="center" color="#43e97b" width="0.55"
-                        position="0 -0.02 0" opacity="0.8"></a-text>
-                    <a-text id="vr-notification" value="" align="center" color="#ffd700" width="0.8"
-                        position="0 -0.08 0" opacity="1" visible="false"></a-text>
-                </a-entity>
-            </a-camera>
-
-            <!-- Quest 2 Controllers with laser pointers -->
-            <a-entity id="left-hand" laser-controls="hand: left; model: true"
-                raycaster="objects: .clickable; far: 20"></a-entity>
-            <a-entity id="right-hand" laser-controls="hand: right; model: true"
-                raycaster="objects: .clickable; far: 20"></a-entity>
-        </a-entity>
-
-    </a-scene>
 </body>
-
 </html>
